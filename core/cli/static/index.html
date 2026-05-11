@@ -1,0 +1,1296 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Modernization Toolkit · Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #161a22;
+      --panel-2: #1d2330;
+      --border: #262d3b;
+      --text: #d8dde7;
+      --muted: #8a93a3;
+      --accent: #6aa9ff;
+      --green: #4ade80;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --magenta: #c084fc;
+      --blue: #60a5fa;
+      --dim: #4a5365;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+      display: flex;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    button {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font: inherit;
+    }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent); color: #0b1220; border-color: var(--accent); font-weight: 600; }
+    button.danger { color: var(--red); }
+    input, textarea {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 6px;
+      font: inherit;
+      width: 100%;
+    }
+    textarea { font-family: var(--mono); font-size: 13px; }
+    .muted { color: var(--muted); }
+    .dim { color: var(--dim); }
+    .mono { font-family: var(--mono); }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .col { display: flex; flex-direction: column; gap: 10px; }
+
+    /* Sidebar */
+    aside {
+      width: 280px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 16px;
+      gap: 16px;
+      overflow-y: auto;
+    }
+    aside h1 {
+      font-size: 14px;
+      margin: 0;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .project-list { display: flex; flex-direction: column; gap: 4px; }
+    .project-item {
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .project-item:hover { background: var(--panel-2); }
+    .project-item.active { background: var(--panel-2); border-color: var(--accent); }
+    .project-item .name { font-weight: 600; }
+    .project-item .path { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+    /* Main */
+    main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    header.topbar {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--panel);
+    }
+    header.topbar h2 { margin: 0; font-size: 16px; }
+
+    .tabs { display: flex; gap: 4px; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--panel); }
+    .tab {
+      padding: 10px 14px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+    }
+    .tab.active { color: var(--text); border-color: var(--accent); }
+
+    .panel { flex: 1; overflow: auto; padding: 20px; }
+
+    /* Status table */
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+    tr:last-child td { border-bottom: none; }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-family: var(--mono);
+    }
+    .pill-extracted { background: #2a313f; color: var(--muted); }
+    .pill-implemented_unverified { background: #3a2f10; color: var(--yellow); }
+    .pill-implemented_verified { background: #14331e; color: var(--green); }
+    .pill-gap { background: #3a1416; color: var(--red); }
+    .pill-drift { background: #2c1539; color: var(--magenta); }
+    .pill-net_new { background: #122944; color: var(--blue); }
+    .pill-deprecated { background: #1f2330; color: var(--dim); }
+
+    /* Output panes */
+    pre.output {
+      background: #0a0c10;
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 6px;
+      overflow: auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 60vh;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .modal {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      width: 460px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .modal h3 { margin: 0; }
+
+    /* Editor layout */
+    .editor-layout { display: grid; grid-template-columns: 240px 1fr; gap: 16px; height: 100%; }
+    .file-list { display: flex; flex-direction: column; gap: 4px; }
+    .file-item {
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+    .file-item:hover { background: var(--panel-2); }
+    .file-item.active { background: var(--panel-2); color: var(--accent); }
+    .editor-pane { display: flex; flex-direction: column; gap: 10px; height: 100%; }
+    .editor-pane textarea { flex: 1; min-height: 400px; resize: none; }
+
+    .empty {
+      padding: 40px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .run-row {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .run-row:hover { border-color: var(--accent); }
+    .run-row .meta { display: flex; gap: 12px; align-items: center; }
+    .badge-ok { color: var(--green); }
+    .badge-fail { color: var(--red); }
+
+    /* Compare view */
+    .compare-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; height: 100%; }
+    .rule-list-wrap { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+    .rule-filter { display: flex; gap: 6px; flex-wrap: wrap; }
+    .rule-filter button { font-size: 12px; padding: 3px 8px; }
+    .rule-filter button.on { border-color: var(--accent); color: var(--accent); }
+    .rule-list { overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding-right: 4px; }
+    .rule-list .domain-header {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); padding: 8px 6px 4px;
+    }
+    .rule-item {
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      border: 1px solid transparent;
+    }
+    .rule-item:hover { background: var(--panel-2); }
+    .rule-item.active { background: var(--panel-2); border-color: var(--accent); }
+    .rule-item .rid { font-family: var(--mono); font-size: 12px; flex-shrink: 0; }
+    .rule-item .rdesc { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .compare-pane { overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+    .rule-head { display: flex; flex-direction: column; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .rule-head .rid-big { font-family: var(--mono); font-size: 18px; color: var(--accent); }
+    .rule-head .desc { font-size: 15px; }
+    .rule-head .meta-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .meta-chip {
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--panel-2);
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+    .drift-callout {
+      background: #2c1539;
+      border-left: 3px solid var(--magenta);
+      padding: 10px 14px;
+      border-radius: 4px;
+    }
+    .drift-callout .label { font-size: 11px; color: var(--magenta); text-transform: uppercase; letter-spacing: 0.08em; }
+
+    .sxs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sxs-col {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .sxs-col h4 {
+      margin: 0;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+    .sxs-col.legacy h4 { color: var(--yellow); }
+    .sxs-col.modern h4 { color: var(--blue); }
+    .sxs-col .field-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-top: 6px; }
+    .sxs-col .field-empty { color: var(--dim); font-style: italic; font-size: 12px; }
+    .sxs-col pre.logic {
+      background: #0a0c10;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 0;
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    .source-list { display: flex; flex-direction: column; gap: 4px; }
+    .source-row { font-family: var(--mono); font-size: 12px; }
+    .source-row .sym { color: var(--accent); }
+    .source-row .lines { color: var(--muted); }
+
+    .examples-section { display: flex; flex-direction: column; gap: 8px; }
+    .examples-section h3 {
+      margin: 0; font-size: 13px;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+    }
+    .example-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: auto 1fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .example-kind {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-family: var(--mono);
+      align-self: start;
+    }
+    .example-kind.positive { background: #14331e; color: var(--green); }
+    .example-kind.negative { background: #3a1416; color: var(--red); }
+    .example-kind.edge { background: #3a2f10; color: var(--yellow); }
+    .example-card pre {
+      margin: 0;
+      background: #0a0c10;
+      padding: 8px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: var(--mono);
+      overflow-x: auto;
+    }
+    .example-card .col-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* Map view */
+    .map-layout { display: flex; flex-direction: column; gap: 12px; height: 100%; }
+    .map-toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .map-legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); align-items: center; }
+    .legend-swatch {
+      display: inline-block;
+      width: 16px; height: 2px;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    .map-svg-wrap {
+      flex: 1;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: auto;
+      min-height: 500px;
+      position: relative;
+    }
+    .map-svg-wrap svg { display: block; }
+    .map-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: #0a0c10;
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      max-width: 320px;
+      z-index: 10;
+      display: none;
+    }
+    .map-tooltip .rid { font-family: var(--mono); color: var(--accent); }
+    .map-node rect { transition: fill 0.15s, stroke 0.15s; }
+    .map-node:hover rect { stroke: var(--accent); }
+    .map-node text { user-select: none; pointer-events: none; }
+    .map-edge { transition: stroke-width 0.15s, opacity 0.15s; cursor: pointer; }
+    .map-edge:hover { stroke-width: 3; opacity: 1 !important; }
+    .map-edge.dimmed { opacity: 0.08; }
+    .map-empty { padding: 60px; text-align: center; color: var(--muted); }
+  </style>
+</head>
+<body>
+<aside>
+  <h1>Modernization Toolkit</h1>
+  <button class="primary" id="add-project-btn">+ Register project</button>
+  <div>
+    <h1 style="font-size:11px; margin-bottom: 6px;">Projects</h1>
+    <div class="project-list" id="project-list"></div>
+  </div>
+</aside>
+
+<main>
+  <header class="topbar">
+    <h2 id="project-title">No project selected</h2>
+    <div class="row" id="project-actions" style="display:none">
+      <button id="action-lint">Lint</button>
+      <button id="action-diff">Diff</button>
+      <button id="action-verify">Verify</button>
+      <button id="action-status">Refresh status</button>
+      <button class="danger" id="action-remove">Remove</button>
+    </div>
+  </header>
+
+  <div class="tabs" id="tabs" style="display:none">
+    <div class="tab active" data-tab="status">Status</div>
+    <div class="tab" data-tab="map">Map</div>
+    <div class="tab" data-tab="compare">Compare</div>
+    <div class="tab" data-tab="rules">Rules</div>
+    <div class="tab" data-tab="runs">Runs</div>
+  </div>
+
+  <div class="panel" id="panel">
+    <div class="empty" id="empty-state">
+      Select a project on the left, or click <strong>Register project</strong> to add one.
+    </div>
+  </div>
+</main>
+
+<script>
+const state = {
+  projects: [],
+  selectedId: null,
+  activeTab: "status",
+  statusCache: {},
+  runsCache: {},
+  rulesCache: {},
+  currentFile: null,
+  catalogCache: {},
+  selectedRuleId: null,
+  compareFilter: "all", // 'all' | <RuleStatus>
+  mapFilter: "all",     // 'all' | <RuleStatus>
+  mapPinFile: null,     // {side: 'legacy'|'modern', path} or null
+};
+
+const $ = (sel) => document.querySelector(sel);
+const el = (tag, attrs = {}, children = []) => {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v;
+    else if (k === "onclick") node.onclick = v;
+    else if (k === "html") node.innerHTML = v;
+    else node.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) {
+    if (typeof c === "string") node.appendChild(document.createTextNode(c));
+    else if (c) node.appendChild(c);
+  }
+  return node;
+};
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    headers: { "content-type": "application/json" },
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// --- Projects sidebar ---
+async function loadProjects() {
+  const { projects } = await api("/api/projects");
+  state.projects = projects;
+  renderProjectList();
+}
+
+function renderProjectList() {
+  const list = $("#project-list");
+  list.innerHTML = "";
+  if (state.projects.length === 0) {
+    list.appendChild(el("div", { class: "muted" }, "No projects yet."));
+    return;
+  }
+  for (const p of state.projects) {
+    const item = el("div", {
+      class: "project-item" + (p.id === state.selectedId ? " active" : ""),
+      onclick: () => selectProject(p.id),
+    }, [
+      el("div", { class: "name" }, p.name),
+      el("div", { class: "path" }, p.path),
+    ]);
+    list.appendChild(item);
+  }
+}
+
+async function selectProject(id) {
+  state.selectedId = id;
+  state.currentFile = null;
+  renderProjectList();
+  const p = state.projects.find((x) => x.id === id);
+  if (!p) return;
+  $("#project-title").textContent = p.name;
+  $("#project-actions").style.display = "flex";
+  $("#tabs").style.display = "flex";
+  $("#empty-state").style.display = "none";
+  setTab(state.activeTab);
+}
+
+// --- Add project modal ---
+$("#add-project-btn").onclick = () => {
+  const overlay = el("div", { class: "modal-overlay" });
+  const close = () => overlay.remove();
+  const nameInput = el("input", { placeholder: "Name (optional)" });
+  const pathInput = el("input", { placeholder: "/absolute/path/to/project" });
+  const error = el("div", { class: "muted" });
+  const submit = async () => {
+    error.textContent = "";
+    try {
+      await api("/api/projects", {
+        method: "POST",
+        body: { name: nameInput.value, path: pathInput.value },
+      });
+      close();
+      await loadProjects();
+    } catch (err) {
+      error.textContent = err.message;
+    }
+  };
+  const modal = el("div", { class: "modal" }, [
+    el("h3", {}, "Register project"),
+    el("div", { class: "muted" }, "Point to a directory scaffolded with `rules init`, or any repo containing a rules/ folder."),
+    nameInput,
+    pathInput,
+    error,
+    el("div", { class: "row", style: "justify-content: flex-end" }, [
+      el("button", { onclick: close }, "Cancel"),
+      el("button", { class: "primary", onclick: submit }, "Add"),
+    ]),
+  ]);
+  overlay.onclick = (e) => { if (e.target === overlay) close(); };
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  pathInput.focus();
+};
+
+// --- Action buttons ---
+$("#action-lint").onclick = () => runCmd("lint");
+$("#action-diff").onclick = () => runCmd("diff");
+$("#action-verify").onclick = () => runCmd("verify");
+$("#action-status").onclick = () => {
+  delete state.statusCache[state.selectedId];
+  if (state.activeTab === "status") renderStatus();
+};
+$("#action-remove").onclick = async () => {
+  if (!state.selectedId) return;
+  const p = state.projects.find((x) => x.id === state.selectedId);
+  if (!confirm(`Remove ${p.name} from the dashboard? (Files on disk are not deleted.)`)) return;
+  await api(`/api/projects/${state.selectedId}`, { method: "DELETE" });
+  state.selectedId = null;
+  $("#project-title").textContent = "No project selected";
+  $("#project-actions").style.display = "none";
+  $("#tabs").style.display = "none";
+  $("#empty-state").style.display = "block";
+  $("#panel").innerHTML = "";
+  $("#panel").appendChild($("#empty-state"));
+  await loadProjects();
+};
+
+async function runCmd(command) {
+  const panel = $("#panel");
+  panel.innerHTML = "";
+  panel.appendChild(el("div", { class: "muted" }, `Running rules ${command}…`));
+  try {
+    const { run } = await api(`/api/projects/${state.selectedId}/run`, {
+      method: "POST",
+      body: { command },
+    });
+    state.activeTab = "runs";
+    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === "runs"));
+    delete state.runsCache[state.selectedId];
+    renderRuns(run.id);
+  } catch (err) {
+    panel.innerHTML = "";
+    panel.appendChild(el("div", { class: "muted" }, `Error: ${err.message}`));
+  }
+}
+
+// --- Tabs ---
+document.querySelectorAll(".tab").forEach((t) => {
+  t.onclick = () => setTab(t.dataset.tab);
+});
+
+function setTab(tab) {
+  state.activeTab = tab;
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tab));
+  if (tab === "status") renderStatus();
+  else if (tab === "map") renderMap();
+  else if (tab === "compare") renderCompare();
+  else if (tab === "rules") renderRulesTab();
+  else if (tab === "runs") renderRuns();
+}
+
+// --- Status view ---
+async function renderStatus() {
+  const panel = $("#panel");
+  panel.innerHTML = "";
+  panel.appendChild(el("div", { class: "muted" }, "Loading status…"));
+
+  let data = state.statusCache[state.selectedId];
+  if (!data) {
+    try {
+      data = await api(`/api/projects/${state.selectedId}/status`);
+      state.statusCache[state.selectedId] = data;
+    } catch (err) {
+      panel.innerHTML = "";
+      panel.appendChild(el("div", { class: "muted" }, `Error: ${err.message}`));
+      return;
+    }
+  }
+
+  panel.innerHTML = "";
+
+  if (!data.ok) {
+    panel.appendChild(el("div", { class: "muted" }, "Status command failed or returned non-JSON output."));
+    if (data.stderr) panel.appendChild(el("pre", { class: "output" }, data.stderr));
+    if (data.raw) panel.appendChild(el("pre", { class: "output" }, data.raw));
+    return;
+  }
+
+  const status = data.status;
+  // Status JSON from the CLI is shaped { [domain]: { [statusName]: count } }.
+  if (status && typeof status === "object" && !Array.isArray(status)) {
+    renderStatusTable(panel, status);
+  } else {
+    panel.appendChild(el("pre", { class: "output" }, JSON.stringify(status, null, 2)));
+  }
+}
+
+const STATUSES = [
+  "extracted", "implemented_unverified", "implemented_verified",
+  "gap", "drift", "net_new", "deprecated",
+];
+
+function renderStatusTable(panel, status) {
+  const domains = Object.keys(status).sort();
+  if (domains.length === 0) {
+    panel.appendChild(el("div", { class: "muted" }, "No rules found."));
+    return;
+  }
+
+  // Compute aggregate counts for the summary strip.
+  const totals = Object.fromEntries(STATUSES.map((s) => [s, 0]));
+  for (const d of domains) {
+    for (const s of STATUSES) totals[s] += (status[d] && status[d][s]) || 0;
+  }
+  const grand = STATUSES.reduce((sum, s) => sum + totals[s], 0);
+  const verifiedPct = grand > 0 ? Math.round((100 * totals.implemented_verified) / grand) : 0;
+
+  panel.appendChild(el("div", { class: "row", style: "gap:24px; margin-bottom: 16px;" }, [
+    el("div", {}, [el("div", { class: "muted" }, "Verified"), el("div", { class: "mono" }, `${verifiedPct}%`)]),
+    el("div", {}, [el("div", { class: "muted" }, "Gaps"), el("div", { class: "mono" }, String(totals.gap))]),
+    el("div", {}, [el("div", { class: "muted" }, "Drift"), el("div", { class: "mono" }, String(totals.drift))]),
+    el("div", {}, [el("div", { class: "muted" }, "Unreviewed"), el("div", { class: "mono" }, String(totals.extracted))]),
+    el("div", {}, [el("div", { class: "muted" }, "Total"), el("div", { class: "mono" }, String(grand))]),
+  ]));
+
+  const table = el("table");
+  const thead = el("thead");
+  const headRow = el("tr", {}, [el("th", {}, "Domain"), ...STATUSES.map((s) => el("th", {}, s.replace(/_/g, " "))), el("th", {}, "Total")]);
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = el("tbody");
+  for (const domain of domains) {
+    const counts = status[domain] || {};
+    const cells = [el("td", { class: "mono" }, domain)];
+    let total = 0;
+    for (const s of STATUSES) {
+      const n = counts[s] || 0;
+      total += n;
+      cells.push(el("td", {}, n > 0 ? el("span", { class: `pill pill-${s}` }, String(n)) : el("span", { class: "dim" }, "·")));
+    }
+    cells.push(el("td", { class: "mono" }, String(total)));
+    tbody.appendChild(el("tr", {}, cells));
+  }
+  table.appendChild(tbody);
+  panel.appendChild(table);
+}
+
+// --- Rules editor ---
+async function renderRulesTab() {
+  const panel = $("#panel");
+  panel.innerHTML = "";
+
+  let files = state.rulesCache[state.selectedId];
+  if (!files) {
+    try {
+      const data = await api(`/api/projects/${state.selectedId}/rules`);
+      files = data.files;
+      state.rulesCache[state.selectedId] = files;
+    } catch (err) {
+      panel.appendChild(el("div", { class: "muted" }, `Error: ${err.message}`));
+      return;
+    }
+  }
+
+  const layout = el("div", { class: "editor-layout" });
+  const fileList = el("div", { class: "file-list" });
+  const pane = el("div", { class: "editor-pane" });
+
+  if (files.length === 0) {
+    fileList.appendChild(el("div", { class: "muted" }, "No YAML files in rules/."));
+  }
+  for (const f of files) {
+    fileList.appendChild(el("div", {
+      class: "file-item" + (state.currentFile === f ? " active" : ""),
+      onclick: () => openFile(f, pane, fileList),
+    }, f));
+  }
+
+  layout.appendChild(fileList);
+  layout.appendChild(pane);
+  panel.appendChild(layout);
+
+  if (state.currentFile && files.includes(state.currentFile)) {
+    openFile(state.currentFile, pane, fileList);
+  } else {
+    pane.appendChild(el("div", { class: "muted" }, "Select a file to edit."));
+  }
+}
+
+async function openFile(name, pane, fileList) {
+  state.currentFile = name;
+  fileList.querySelectorAll(".file-item").forEach((n) => n.classList.toggle("active", n.textContent === name));
+  pane.innerHTML = "";
+  pane.appendChild(el("div", { class: "muted" }, `Loading ${name}…`));
+  try {
+    const { content } = await api(`/api/projects/${state.selectedId}/rules/${encodeURIComponent(name)}`);
+    pane.innerHTML = "";
+    const ta = el("textarea", { spellcheck: "false" });
+    ta.value = content;
+    const status = el("div", { class: "muted" });
+    const saveBtn = el("button", { class: "primary" }, "Save");
+    saveBtn.onclick = async () => {
+      status.textContent = "Saving…";
+      try {
+        await api(`/api/projects/${state.selectedId}/rules/${encodeURIComponent(name)}`, {
+          method: "PUT",
+          body: { content: ta.value },
+        });
+        status.textContent = "Saved.";
+        // Invalidate caches — rules changed.
+        delete state.statusCache[state.selectedId];
+        delete state.catalogCache[state.selectedId];
+      } catch (err) {
+        status.textContent = `Error: ${err.message}`;
+      }
+    };
+    pane.appendChild(el("div", { class: "row", style: "justify-content: space-between;" }, [
+      el("div", { class: "mono muted" }, name),
+      el("div", { class: "row" }, [status, saveBtn]),
+    ]));
+    pane.appendChild(ta);
+  } catch (err) {
+    pane.innerHTML = "";
+    pane.appendChild(el("div", { class: "muted" }, `Error: ${err.message}`));
+  }
+}
+
+// --- Map view (bipartite legacy<->modern file map) ---
+
+// Status -> CSS-variable color name (resolved at SVG render time).
+const STATUS_COLOR = {
+  extracted: "var(--dim)",
+  implemented_unverified: "var(--yellow)",
+  implemented_verified: "var(--green)",
+  gap: "var(--red)",
+  drift: "var(--magenta)",
+  net_new: "var(--blue)",
+  deprecated: "var(--dim)",
+};
+
+const GAP_TERMINUS = "__gap__";
+const NETNEW_TERMINUS = "__net_new__";
+
+async function loadCatalogIfNeeded() {
+  let cat = state.catalogCache[state.selectedId];
+  if (cat) return cat;
+  const data = await api(`/api/projects/${state.selectedId}/catalog`);
+  cat = data.catalogs;
+  state.catalogCache[state.selectedId] = cat;
+  return cat;
+}
+
+function buildBipartite(catalogs) {
+  const legacyFiles = new Map();   // path -> { ruleCount }
+  const modernFiles = new Map();
+  const edges = [];                // { ruleId, status, description, legacy, modern, kind }
+
+  let hasGap = false;
+  let hasNetNew = false;
+
+  for (const c of catalogs) {
+    for (const r of c.rules) {
+      const legacy = (r.sources && r.sources.legacy) || [];
+      const modern = (r.sources && r.sources.modern) || [];
+      for (const s of legacy) legacyFiles.set(s.path, (legacyFiles.get(s.path) ?? 0) + 1);
+      for (const s of modern) modernFiles.set(s.path, (modernFiles.get(s.path) ?? 0) + 1);
+
+      if (legacy.length && modern.length) {
+        // Cross-product edges (typically 1x1; occasionally many-to-many).
+        for (const l of legacy) for (const m of modern) {
+          edges.push({
+            ruleId: r.id, status: r.status, description: r.description,
+            legacy: l.path, modern: m.path, kind: "linked",
+          });
+        }
+      } else if (legacy.length && !modern.length) {
+        hasGap = true;
+        for (const l of legacy) {
+          edges.push({
+            ruleId: r.id, status: r.status, description: r.description,
+            legacy: l.path, modern: GAP_TERMINUS, kind: "gap",
+          });
+        }
+      } else if (!legacy.length && modern.length) {
+        hasNetNew = true;
+        for (const m of modern) {
+          edges.push({
+            ruleId: r.id, status: r.status, description: r.description,
+            legacy: NETNEW_TERMINUS, modern: m.path, kind: "net_new",
+          });
+        }
+      }
+    }
+  }
+
+  const legacyList = [...legacyFiles.entries()]
+    .map(([path, count]) => ({ path, count }))
+    .sort((a, b) => a.path.localeCompare(b.path));
+  const modernList = [...modernFiles.entries()]
+    .map(([path, count]) => ({ path, count }))
+    .sort((a, b) => a.path.localeCompare(b.path));
+
+  if (hasNetNew) legacyList.push({ path: NETNEW_TERMINUS, count: 0, terminus: true });
+  if (hasGap) modernList.push({ path: GAP_TERMINUS, count: 0, terminus: true });
+
+  return { legacyList, modernList, edges };
+}
+
+function basenameOf(p) {
+  if (p === GAP_TERMINUS) return "(no modern impl yet)";
+  if (p === NETNEW_TERMINUS) return "(modern-only)";
+  return p.split("/").pop();
+}
+
+async function renderMap() {
+  const panel = $("#panel");
+  panel.innerHTML = "";
+  panel.appendChild(el("div", { class: "muted" }, "Loading catalog…"));
+
+  let catalogs;
+  try {
+    catalogs = await loadCatalogIfNeeded();
+  } catch (err) {
+    panel.innerHTML = "";
+    panel.appendChild(el("div", { class: "muted" }, `Error: ${err.message}`));
+    return;
+  }
+
+  const graph = buildBipartite(catalogs);
+  panel.innerHTML = "";
+
+  if (graph.edges.length === 0) {
+    panel.appendChild(el("div", { class: "map-empty" }, "No rules with source paths to map yet."));
+    return;
+  }
+
+  const layout = el("div", { class: "map-layout" });
+
+  // Toolbar: filter + legend
+  const toolbar = el("div", { class: "map-toolbar" });
+  const filter = el("div", { class: "rule-filter" });
+  for (const f of ["all", ...STATUSES]) {
+    filter.appendChild(el("button", {
+      class: state.mapFilter === f ? "on" : "",
+      onclick: () => { state.mapFilter = f; renderMap(); },
+    }, f === "all" ? "all" : f.replace(/_/g, " ")));
+  }
+  toolbar.appendChild(filter);
+
+  if (state.mapPinFile) {
+    toolbar.appendChild(el("button", {
+      onclick: () => { state.mapPinFile = null; renderMap(); },
+    }, `Clear pin: ${basenameOf(state.mapPinFile.path)} ✕`));
+  }
+
+  const legend = el("div", { class: "map-legend" });
+  for (const s of STATUSES) {
+    legend.appendChild(el("span", {}, [
+      el("span", { class: "legend-swatch", style: `background: ${STATUS_COLOR[s]};` }),
+      s.replace(/_/g, " "),
+    ]));
+  }
+  toolbar.appendChild(legend);
+  layout.appendChild(toolbar);
+
+  // SVG + tooltip
+  const svgWrap = el("div", { class: "map-svg-wrap" });
+  const tooltip = el("div", { class: "map-tooltip" });
+  svgWrap.appendChild(buildSvg(graph, tooltip));
+  svgWrap.appendChild(tooltip);
+  layout.appendChild(svgWrap);
+
+  panel.appendChild(layout);
+}
+
+function buildSvg(graph, tooltip) {
+  const NODE_W = 240;
+  const NODE_H = 28;
+  const ROW_GAP = 8;
+  const COL_GAP = 360;
+  const PAD = 24;
+  const FONT = 12;
+
+  const leftCount = graph.legacyList.length;
+  const rightCount = graph.modernList.length;
+  const rows = Math.max(leftCount, rightCount);
+
+  const width = PAD + NODE_W + COL_GAP + NODE_W + PAD;
+  const height = PAD + rows * (NODE_H + ROW_GAP) + PAD;
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("width", width);
+  svg.setAttribute("height", height);
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+
+  const xLeft = PAD;
+  const xRight = PAD + NODE_W + COL_GAP;
+
+  // Build node-position lookup keyed by side+path.
+  const leftPos = new Map();
+  const rightPos = new Map();
+  graph.legacyList.forEach((f, i) => leftPos.set(f.path, PAD + i * (NODE_H + ROW_GAP)));
+  graph.modernList.forEach((f, i) => rightPos.set(f.path, PAD + i * (NODE_H + ROW_GAP)));
+
+  // Column headers
+  svg.appendChild(svgText(xLeft, PAD - 8, "LEGACY", { fill: "var(--yellow)", "font-size": 11, "letter-spacing": "0.08em" }));
+  svg.appendChild(svgText(xRight, PAD - 8, "MODERN", { fill: "var(--blue)", "font-size": 11, "letter-spacing": "0.08em" }));
+
+  // Edges first (so nodes paint on top)
+  const edgesG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  edgesG.setAttribute("fill", "none");
+
+  for (const e of graph.edges) {
+    const visible = state.mapFilter === "all" || state.mapFilter === e.status;
+    const matchesPin = !state.mapPinFile
+      || (state.mapPinFile.side === "legacy" && e.legacy === state.mapPinFile.path)
+      || (state.mapPinFile.side === "modern" && e.modern === state.mapPinFile.path);
+    const yL = leftPos.get(e.legacy) ?? 0;
+    const yR = rightPos.get(e.modern) ?? 0;
+    const x1 = xLeft + NODE_W;
+    const x2 = xRight;
+    const cx = (x1 + x2) / 2;
+    const d = `M${x1},${yL + NODE_H / 2} C${cx},${yL + NODE_H / 2} ${cx},${yR + NODE_H / 2} ${x2},${yR + NODE_H / 2}`;
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    path.setAttribute("stroke", STATUS_COLOR[e.status] || "var(--dim)");
+    path.setAttribute("stroke-width", "1.5");
+    path.setAttribute("class", "map-edge" + (visible && matchesPin ? "" : " dimmed"));
+    path.style.opacity = "0.6";
+    if (e.kind === "gap" || e.kind === "net_new") {
+      path.setAttribute("stroke-dasharray", "4 4");
+    }
+    path.addEventListener("mouseenter", (ev) => {
+      tooltip.innerHTML = "";
+      tooltip.appendChild(el("div", { class: "rid" }, e.ruleId));
+      tooltip.appendChild(el("div", {}, e.description));
+      tooltip.appendChild(el("div", { class: "muted", style: "margin-top:4px;" }, [
+        el("span", { class: `pill pill-${e.status}`, style: "padding:1px 6px; font-size:10px;" }, e.status.replace(/_/g, " ")),
+      ]));
+      tooltip.style.display = "block";
+      moveTooltip(ev, tooltip);
+    });
+    path.addEventListener("mousemove", (ev) => moveTooltip(ev, tooltip));
+    path.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+    path.addEventListener("click", () => {
+      state.selectedRuleId = e.ruleId;
+      setTab("compare");
+    });
+    edgesG.appendChild(path);
+  }
+  svg.appendChild(edgesG);
+
+  // Nodes
+  const drawNode = (f, x, y, side) => {
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("class", "map-node");
+    g.style.cursor = f.terminus ? "default" : "pointer";
+
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("x", x);
+    rect.setAttribute("y", y);
+    rect.setAttribute("width", NODE_W);
+    rect.setAttribute("height", NODE_H);
+    rect.setAttribute("rx", 4);
+    rect.setAttribute("fill", f.terminus ? "transparent" : "var(--panel-2)");
+    rect.setAttribute("stroke", state.mapPinFile && state.mapPinFile.side === side && state.mapPinFile.path === f.path
+      ? "var(--accent)" : "var(--border)");
+    rect.setAttribute("stroke-dasharray", f.terminus ? "3 3" : "0");
+
+    const text = svgText(x + 10, y + NODE_H / 2 + 4, basenameOf(f.path), { fill: f.terminus ? "var(--muted)" : "var(--text)" });
+    const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+    title.textContent = f.path === GAP_TERMINUS || f.path === NETNEW_TERMINUS ? basenameOf(f.path) : `${f.path}  (${f.count} rule${f.count === 1 ? "" : "s"})`;
+    g.appendChild(title);
+
+    if (!f.terminus) {
+      const countBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      countBg.setAttribute("x", x + NODE_W - 32);
+      countBg.setAttribute("y", y + 6);
+      countBg.setAttribute("width", 24);
+      countBg.setAttribute("height", NODE_H - 12);
+      countBg.setAttribute("rx", 3);
+      countBg.setAttribute("fill", "var(--bg)");
+      g.appendChild(rect);
+      g.appendChild(countBg);
+      g.appendChild(text);
+      g.appendChild(svgText(x + NODE_W - 20, y + NODE_H / 2 + 4, String(f.count), {
+        fill: "var(--muted)", "text-anchor": "middle", "font-size": 11,
+      }));
+      g.addEventListener("click", () => {
+        if (state.mapPinFile && state.mapPinFile.side === side && state.mapPinFile.path === f.path) {
+          state.mapPinFile = null;
+        } else {
+          state.mapPinFile = { side, path: f.path };
+        }
+        renderMap();
+      });
+    } else {
+      g.appendChild(rect);
+      g.appendChild(text);
+    }
+    return g;
+  };
+
+  for (const f of graph.legacyList) svg.appendChild(drawNode(f, xLeft, leftPos.get(f.path), "legacy"));
+  for (const f of graph.modernList) svg.appendChild(drawNode(f, xRight, rightPos.get(f.path), "modern"));
+
+  return svg;
+}
+
+function svgText(x, y, content, attrs = {}) {
+  const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  t.setAttribute("x", x);
+  t.setAttribute("y", y);
+  for (const [k, v] of Object.entries(attrs)) t.setAttribute(k, v);
+  t.textContent = content;
+  return t;
+}
+
+function moveTooltip(ev, tooltip) {
+  const wrap = tooltip.parentElement.getBoundingClientRect();
+  tooltip.style.left = (ev.clientX - wrap.left + 12) + "px";
+  tooltip.style.top = (ev.clientY - wrap.top + 12) + "px";
+}
+
+// --- Compare view (side-by-side rule detail) ---
+async function renderCompare() {
+  const panel = $("#panel");
+  panel.innerHTML = "";
+  panel.appendChild(el("div", { class: "muted" }, "Loading catalog…"));
+
+  let cat;
+  try {
+    cat = await loadCatalogIfNeeded();
+  } catch (err) {
+    panel.innerHTML = "";
+    panel.appendChild(el("div", { class: "muted" }, `Error: ${err.message}`));
+    return;
+  }
+
+  panel.innerHTML = "";
+
+  // Flatten all rules with their domain.
+  const allRules = [];
+  for (const c of cat) for (const r of c.rules) allRules.push(r);
+  if (allRules.length === 0) {
+    panel.appendChild(el("div", { class: "muted" }, "No rules in this catalog yet."));
+    return;
+  }
+
+  // Default-select the first rule (or the previously selected one if still present).
+  if (!state.selectedRuleId || !allRules.find((r) => r.id === state.selectedRuleId)) {
+    state.selectedRuleId = allRules[0].id;
+  }
+
+  const layout = el("div", { class: "compare-layout" });
+
+  // Left: filterable rule list, grouped by domain.
+  const leftWrap = el("div", { class: "rule-list-wrap" });
+  const filterBar = el("div", { class: "rule-filter" });
+  const FILTERS = ["all", ...STATUSES];
+  for (const f of FILTERS) {
+    const btn = el("button", {
+      class: state.compareFilter === f ? "on" : "",
+      onclick: () => { state.compareFilter = f; renderCompare(); },
+    }, f === "all" ? "all" : f.replace(/_/g, " "));
+    filterBar.appendChild(btn);
+  }
+  leftWrap.appendChild(filterBar);
+
+  const ruleList = el("div", { class: "rule-list" });
+  for (const c of cat) {
+    const visible = c.rules.filter((r) => state.compareFilter === "all" || r.status === state.compareFilter);
+    if (visible.length === 0) continue;
+    ruleList.appendChild(el("div", { class: "domain-header" }, c.domain));
+    for (const r of visible) {
+      const item = el("div", {
+        class: "rule-item" + (r.id === state.selectedRuleId ? " active" : ""),
+        onclick: () => { state.selectedRuleId = r.id; renderCompare(); },
+      }, [
+        el("span", { class: `pill pill-${r.status}`, style: "padding: 1px 6px; font-size: 10px;" }, r.status[0].toUpperCase()),
+        el("span", { class: "rid" }, r.id),
+        el("span", { class: "rdesc" }, r.description),
+      ]);
+      ruleList.appendChild(item);
+    }
+  }
+  if (ruleList.childElementCount === 0) {
+    ruleList.appendChild(el("div", { class: "muted" }, `No rules match filter "${state.compareFilter}".`));
+  }
+  leftWrap.appendChild(ruleList);
+
+  // Right: side-by-side detail of the selected rule.
+  const right = el("div", { class: "compare-pane" });
+  const rule = allRules.find((r) => r.id === state.selectedRuleId);
+  if (rule) {
+    renderRuleDetail(right, rule);
+  } else {
+    right.appendChild(el("div", { class: "muted" }, "Select a rule on the left."));
+  }
+
+  layout.appendChild(leftWrap);
+  layout.appendChild(right);
+  panel.appendChild(layout);
+}
+
+function renderRuleDetail(container, rule) {
+  // Header
+  const head = el("div", { class: "rule-head" });
+  head.appendChild(el("div", { class: "rid-big" }, rule.id));
+  head.appendChild(el("div", { class: "desc" }, rule.description));
+  const metaRow = el("div", { class: "meta-row" }, [
+    el("span", { class: `pill pill-${rule.status}` }, rule.status.replace(/_/g, " ")),
+    el("span", { class: "meta-chip" }, `type: ${rule.type}`),
+    el("span", { class: "meta-chip" }, `domain: ${rule.domain}`),
+    el("span", { class: "meta-chip" }, `confidence: ${rule.confidence}`),
+  ]);
+  if (rule.tags && rule.tags.length) {
+    metaRow.appendChild(el("span", { class: "meta-chip" }, `tags: ${rule.tags.join(", ")}`));
+  }
+  head.appendChild(metaRow);
+  container.appendChild(head);
+
+  // Drift callout
+  if (rule.status === "drift" && rule.drift_reason) {
+    container.appendChild(el("div", { class: "drift-callout" }, [
+      el("div", { class: "label" }, "Drift reason"),
+      el("div", {}, rule.drift_reason),
+    ]));
+  }
+  if (rule.status === "deprecated" && rule.deprecated_reason) {
+    container.appendChild(el("div", { class: "drift-callout" }, [
+      el("div", { class: "label" }, "Deprecated reason"),
+      el("div", {}, rule.deprecated_reason),
+    ]));
+  }
+  if (rule.status === "gap") {
+    container.appendChild(el("div", { class: "drift-callout", style: "background:#3a1416; border-color: var(--red);" }, [
+      el("div", { class: "label", style: "color: var(--red);" }, "Gap"),
+      el("div", {}, "Legacy rule has no modern implementation yet."),
+    ]));
+  }
+  if (rule.status === "net_new") {
+    container.appendChild(el("div", { class: "drift-callout", style: "background:#122944; border-color: var(--blue);" }, [
+      el("div", { class: "label", style: "color: var(--blue);" }, "Net-new"),
+      el("div", {}, "Modern-only rule with no legacy counterpart."),
+    ]));
+  }
+
+  // Side-by-side
+  const sxs = el("div", { class: "sxs" });
+  sxs.appendChild(renderSide(rule, "legacy"));
+  sxs.appendChild(renderSide(rule, "modern"));
+  container.appendChild(sxs);
+
+  // Common metadata under the columns
+  const common = el("div", { class: "sxs-col" });
+  common.appendChild(el("h4", {}, "Common"));
+  if (rule.trigger) {
+    common.appendChild(el("div", { class: "field-label" }, "trigger"));
+    common.appendChild(el("div", { class: "mono" }, rule.trigger));
+  }
+  if (rule.preconditions && rule.preconditions.length) {
+    common.appendChild(el("div", { class: "field-label" }, "preconditions"));
+    const ul = el("ul", { style: "margin: 4px 0; padding-left: 20px;" });
+    for (const p of rule.preconditions) ul.appendChild(el("li", { class: "mono", style: "font-size: 12px;" }, p));
+    common.appendChild(ul);
+  }
+  if (rule.effect) {
+    common.appendChild(el("div", { class: "field-label" }, "effect"));
+    common.appendChild(el("div", {}, rule.effect));
+  }
+  if (rule.notes) {
+    common.appendChild(el("div", { class: "field-label" }, "notes"));
+    common.appendChild(el("div", { class: "muted" }, rule.notes));
+  }
+  container.appendChild(common);
+
+  // Examples
+  if (rule.examples && rule.examples.length) {
+    const section = el("div", { class: "examples-section" });
+    section.appendChild(el("h3", {}, `Examples (${rule.examples.length})`));
+    for (const ex of rule.examples) {
+      const card = el("div", { class: "example-card" }, [
+        el("div", { class: `example-kind ${ex.kind}` }, ex.kind),
+        el("div", {}, [
+          el("div", { class: "col-label" }, "input"),
+          el("pre", {}, JSON.stringify(ex.input, null, 2)),
+        ]),
+        el("div", {}, [
+          el("div", { class: "col-label" }, "expect"),
+          el("pre", {}, JSON.stringify(ex.expect, null, 2)),
+        ]),
+      ]);
+      if (ex.notes) {
+        card.appendChild(el("div", { class: "muted", style: "grid-column: 1 / -1; font-size: 12px;" }, ex.notes));
+      }
+      section.appendChild(card);
+    }
+    container.appendChild(section);
+  }
+}
+
+function renderSide(rule, side) {
+  const col = el("div", { class: `sxs-col ${side}` });
+  col.appendChild(el("h4", {}, side));
+
+  const sources = (rule.sources && rule.sources[side]) || [];
+  col.appendChild(el("div", { class: "field-label" }, "sources"));
+  if (sources.length === 0) {
+    col.appendChild(el("div", { class: "field-empty" }, side === "modern" ? "no modern implementation" : "no legacy source"));
+  } else {
+    const list = el("div", { class: "source-list" });
+    for (const s of sources) {
+      const lines = s.lines ? ` ${s.lines[0]}-${s.lines[1]}` : "";
+      list.appendChild(el("div", { class: "source-row" }, [
+        el("span", { class: "sym" }, s.symbol),
+        " ",
+        el("span", { class: "muted" }, s.path),
+        el("span", { class: "lines" }, lines),
+      ]));
+    }
+    col.appendChild(list);
+  }
+
+  // Note: the catalog has a single `logic` field — not per-side. We display
+  // the same logic in both columns; the side-by-side framing is for the
+  // sources + examples (which are kinded). When a future schema split logic
+  // into legacy_logic / modern_logic this is where we'd diverge.
+  col.appendChild(el("div", { class: "field-label" }, "logic"));
+  col.appendChild(el("pre", { class: "logic" }, rule.logic || "(no logic recorded)"));
+
+  return col;
+}
+
+// --- Runs view ---
+async function renderRuns(highlightId) {
+  const panel = $("#panel");
+  panel.innerHTML = "";
+  panel.appendChild(el("div", { class: "muted" }, "Loading runs…"));
+
+  let runs = state.runsCache[state.selectedId];
+  if (!runs) {
+    try {
+      const data = await api(`/api/projects/${state.selectedId}/runs`);
+      runs = data.runs;
+      state.runsCache[state.selectedId] = runs;
+    } catch (err) {
+      panel.innerHTML = "";
+      panel.appendChild(el("div", { class: "muted" }, `Error: ${err.message}`));
+      return;
+    }
+  }
+
+  panel.innerHTML = "";
+  if (runs.length === 0) {
+    panel.appendChild(el("div", { class: "muted" }, "No runs yet. Use the action buttons above to trigger one."));
+    return;
+  }
+  for (const r of runs) {
+    const expanded = r.id === highlightId;
+    const row = el("div", { class: "run-row" }, [
+      el("div", { class: "meta" }, [
+        el("strong", {}, r.command),
+        el("span", { class: r.exit_code === 0 ? "badge-ok" : "badge-fail" }, r.exit_code === 0 ? "✓ ok" : `✗ exit ${r.exit_code}`),
+        el("span", { class: "muted mono" }, new Date(r.started_at).toLocaleString()),
+      ]),
+    ]);
+    let body = null;
+    if (expanded) {
+      body = el("pre", { class: "output" }, r.output || "(no output)");
+      row.appendChild(body);
+    }
+    row.onclick = () => {
+      if (body) { body.remove(); body = null; return; }
+      body = el("pre", { class: "output" }, r.output || "(no output)");
+      row.appendChild(body);
+    };
+    panel.appendChild(row);
+  }
+}
+
+// --- Init ---
+loadProjects().catch((err) => {
+  $("#panel").innerHTML = "";
+  $("#panel").appendChild(el("div", { class: "muted" }, `Error: ${err.message}`));
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "on-save-rule-file",
+  "description": "Validate a rule catalog file immediately on save so authoring errors surface fast.",
+  "trigger": {
+    "type": "fileSave",
+    "fileMatchPattern": "rules/**/*.yaml"
+  },
+  "enabled": true,
+  "action": {
+    "type": "shell",
+    "command": "rules lint ${trigger.filePath}",
+    "onFailure": "notify",
+    "notify": {
+      "level": "error",
+      "title": "Rule catalog lint failed",
+      "message": "Catalog file ${trigger.filePath} has lint errors. Fix before committing or downstream verification will be inconsistent."
+    }
+  },
+  "notes": [
+    "Excludes files starting with _ via the lint command's own filter.",
+    "Cross-file ID uniqueness is checked even when linting a single file,",
+    "since the loader reads sibling files for the check."
+  ]
+}

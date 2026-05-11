@@ -1,0 +1,27 @@
+{
+  "name": "on-save-modern-domain",
+  "description": "Re-run rules verify for rules affected by a modern domain file change, and downgrade their status if examples fail.",
+  "trigger": {
+    "type": "fileSave",
+    "fileMatchPattern": "modern/src/domain/**/*.ts"
+  },
+  "enabled": true,
+  "action": {
+    "type": "shell",
+    "command": "rules verify --changed-since HEAD --emit json",
+    "env": {
+      "RULES_CHANGED_FILES": "${trigger.filePath}"
+    },
+    "onFailure": "notify",
+    "notify": {
+      "level": "warning",
+      "title": "Rule verification failed",
+      "message": "One or more rule examples failed against ${trigger.filePath}. Run `rules verify` locally to investigate. Affected rule status will be reset to implemented_unverified."
+    }
+  },
+  "notes": [
+    "This hook runs on every save to modern domain code, which can be noisy.",
+    "If verification becomes slow, scope it via --rule <id> using a project-",
+    "specific lookup, or move the heavy verification to pre-push instead."
+  ]
+}

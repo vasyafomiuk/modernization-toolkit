@@ -1,0 +1,41 @@
+{
+  "name": "agent-stop-verify",
+  "description": "When the agent stops after modifying modern domain code, run lint+verify and downgrade any affected rule's status if it was implemented_verified but examples no longer pass.",
+  "trigger": {
+    "type": "agentStop",
+    "condition": {
+      "modifiedFiles": "modern/src/domain/**/*.ts"
+    }
+  },
+  "enabled": true,
+  "action": {
+    "type": "shell",
+    "commands": [
+      "rules lint",
+      "rules verify --changed-since HEAD~1 --emit json > /tmp/rules-verify-${session.id}.json"
+    ],
+    "onFailure": "notify",
+    "postAction": {
+      "type": "script",
+      "script": [
+        "# Parse /tmp/rules-verify-${session.id}.json. For any rule that:",
+        "#   - had status implemented_verified prior to this session, AND",
+        "#   - has at least one failing example now",
+        "# update its status to implemented_unverified and add a notes entry:",
+        "#   notes: 'Auto-downgraded by agent-stop-verify hook on <timestamp>;",
+        "#          examples failed after changes in <files>'",
+        "#",
+        "# DO NOT auto-update the source code. DO NOT auto-edit the rule.",
+        "# This hook only updates the status field and the notes field."
+      ]
+    }
+  },
+  "notes": [
+    "This is the safety-net hook that enforces 'status is earned, not assigned.'",
+    "Without it, status: implemented_verified can rot silently when modern code",
+    "changes break previously-verified examples.",
+    "",
+    "If your team finds the downgrade noisy on WIP branches, gate this hook to",
+    "main-branch sessions only, OR change the trigger to pre-merge instead."
+  ]
+}

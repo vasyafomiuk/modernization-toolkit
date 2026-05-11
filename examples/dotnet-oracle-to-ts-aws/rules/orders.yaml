@@ -1,0 +1,239 @@
+# Example rule catalog: orders domain
+# This file demonstrates the catalog format with realistic rules.
+# Lint with: rules lint rules/_example-orders.yaml
+
+- id: ORD-CALC-007
+  type: calculation
+  domain: orders
+  description: Gold-tier customers get 15% off orders >= $100, capped at $50
+  trigger: order.total_computed
+  preconditions:
+    - customer.tier == "GOLD"
+    - order.subtotal >= 100
+  logic: |
+    discount = min(order.subtotal * 0.15, 50)
+  effect: order.discount_applied = discount
+  sources:
+    legacy:
+      - path: legacy/src/Orders/OrderService.cs
+        symbol: OrderService.ApplyTierDiscount
+        lines: [142, 167]
+      - path: legacy/db/PKG_ORDER_RULES.pkb
+        symbol: calc_gold_discount
+        lines: [89, 103]
+    modern:
+      - path: modern/src/domain/orders/pricing/discount.ts
+        symbol: applyTierDiscount
+        lines: [23, 41]
+  examples:
+    - input: { tier: "GOLD", subtotal: 200.00 }
+      expect: { discount: 30.00 }
+      kind: positive
+    - input: { tier: "GOLD", subtotal: 1000.00 }
+      expect: { discount: 50.00 }
+      kind: edge
+      notes: cap kicks in
+    - input: { tier: "GOLD", subtotal: 99.99 }
+      expect: { discount: 0.00 }
+      kind: edge
+      notes: threshold boundary
+    - input: { tier: "SILVER", subtotal: 200.00 }
+      expect: { discount: 0.00 }
+      kind: negative
+  status: implemented_verified
+  confidence: high
+  notes: |
+    Money uses Decimal.js on modern side, C# decimal on legacy. Banker's
+    rounding (half-to-even) on both. Verified against shadow harness
+    over 14 days of production traffic.
+  reviewed_by: jane@example.com
+  reviewed_at: 2026-04-12
+  tags: [pricing, tier, discount]
+
+- id: ORD-VAL-103
+  type: validation
+  domain: orders
+  description: Orders shipping to embargoed countries are rejected
+  preconditions:
+    - order has ship_country
+  logic: |
+    if order.ship_country in embargoed_countries:
+      raise EmbargoedDestination(country=order.ship_country)
+  sources:
+    legacy:
+      - path: legacy/db/PKG_ORDER_VALIDATION.pkb
+        symbol: validate_shipment
+        lines: [12, 28]
+    modern:
+      - path: modern/src/domain/orders/validation/embargo.ts
+        symbol: assertNotEmbargoed
+        lines: [8, 21]
+  examples:
+    - input: { ship_country: "US" }
+      expect: { raises: null }
+      kind: positive
+    - input: { ship_country: "XX" }
+      expect: { raises: "EmbargoedDestination" }
+      kind: negative
+      notes: "XX is in the embargoed list per test fixtures"
+  status: implemented_verified
+  confidence: high
+  notes: |
+    Embargoed list is sourced from compliance/embargoed_countries.json
+    in modern; from EMBARGOED_COUNTRIES table in legacy. Sync via CDC.
+  reviewed_by: alex@example.com
+  reviewed_at: 2026-04-15
+  tags: [compliance, shipping]
+
+- id: ORD-AUTH-012
+  type: authorization
+  domain: orders
+  description: Only the owner or an admin can edit an order in DRAFT status
+  preconditions:
+    - order.status == "DRAFT"
+  logic: |
+    allow = (user.role == "admin") or (user.id == order.owner_id)
+    if not allow:
+      raise Unauthorized
+  sources:
+    legacy:
+      - path: legacy/src/Orders/OrderService.cs
+        symbol: OrderService.AssertCanEdit
+        lines: [201, 218]
+    modern:
+      - path: modern/src/domain/orders/authz/canEdit.ts
+        symbol: assertCanEditDraft
+        lines: [5, 22]
+  examples:
+    - input:
+        user: { id: "u1", role: "user" }
+        order: { owner_id: "u1", status: "DRAFT" }
+      expect: { raises: null }
+      kind: positive
+    - input:
+        user: { id: "u2", role: "user" }
+        order: { owner_id: "u1", status: "DRAFT" }
+      expect: { raises: "Unauthorized" }
+      kind: negative
+    - input:
+        user: { id: "u2", role: "admin" }
+        order: { owner_id: "u1", status: "DRAFT" }
+      expect: { raises: null }
+      kind: edge
+      notes: admin override
+  status: implemented_verified
+  confidence: high
+  reviewed_by: jane@example.com
+  reviewed_at: 2026-04-18
+
+- id: ORD-STATE-022
+  type: state_transition
+  domain: orders
+  description: Orders move DRAFT -> SUBMITTED when all items are in stock
+  preconditions:
+    - order.status == "DRAFT"
+  logic: |
+    if order.status == "DRAFT" and all(item.in_stock for item in order.items):
+      order.status -> "SUBMITTED"
+      order.submitted_at = now()
+  sources:
+    legacy:
+      - path: legacy/src/Orders/OrderService.cs
+        symbol: OrderService.Submit
+        lines: [301, 340]
+    modern:
+      - path: modern/src/domain/orders/lifecycle/submit.ts
+        symbol: submitOrder
+        lines: [12, 38]
+  examples:
+    - input:
+        order: { status: "DRAFT", items: [{ in_stock: true }, { in_stock: true }] }
+      expect: { order: { status: "SUBMITTED" } }
+      kind: positive
+    - input:
+        order: { status: "DRAFT", items: [{ in_stock: true }, { in_stock: false }] }
+      expect: { order: { status: "DRAFT" }, raises: "OutOfStock" }
+      kind: negative
+    - input:
+        order: { status: "SUBMITTED", items: [{ in_stock: true }] }
+      expect: { raises: "InvalidStateTransition" }
+      kind: edge
+      notes: already submitted
+  status: implemented_unverified
+  confidence: medium
+  notes: |
+    Shadow harness sees 0 diffs in 3 days but threshold for promotion
+    to implemented_verified is 7 days clean.
+
+- id: ORD-SIDE-014
+  type: side_effect
+  domain: orders
+  description: When an order ships, send shipment-confirmation email and write audit record
+  trigger: order.status -> "SHIPPED"
+  logic: |
+    on order.status -> "SHIPPED":
+      send_email(to=order.customer.email, template="shipment_confirmation")
+      write_audit(action="ORDER_SHIPPED_NOTIFICATION", subject=order.id)
+  sources:
+    modern:
+      - path: modern/src/domain/orders/events/onShipped.ts
+        symbol: onOrderShipped
+        lines: [1, 13]
+  examples:
+    - input: { order_status_change: { from: "READY", to: "SHIPPED" } }
+      expect: { emails_sent: 1, audit_records_written: 1 }
+      kind: positive
+    - input: { order_status_change: { from: "READY", to: "CANCELLED" } }
+      expect: { emails_sent: 0, audit_records_written: 0 }
+      kind: negative
+  status: net_new
+  confidence: high
+  notes: |
+    Modern-only. Legacy emitted these via a nightly batch job (PKG_NOTIFICATIONS).
+    Moved to event-driven in modern. Tracked in ADR-0017.
+  tags: [notifications, events]
+
+- id: ORD-CALC-018
+  type: calculation
+  domain: orders
+  description: Tax is computed per line item using the ship-to jurisdiction rate
+  preconditions:
+    - order.ship_address is set
+  logic: |
+    for item in order.items:
+      rate = lookup_tax_rate(jurisdiction=order.ship_address.jurisdiction,
+                             category=item.tax_category)
+      item.tax = round_banker(item.unit_price * item.quantity * rate, 2)
+    order.totals.tax = sum(item.tax for item in order.items)
+  sources:
+    legacy:
+      - path: legacy/src/Orders/Tax/TaxCalculator.cs
+        symbol: TaxCalculator.Compute
+        lines: [44, 91]
+    modern:
+      - path: modern/src/domain/orders/pricing/tax.ts
+        symbol: computeTax
+        lines: [15, 58]
+  examples:
+    - input:
+        ship_jurisdiction: "US-CA"
+        items: [{ unit_price: 100.00, quantity: 1, tax_category: "standard" }]
+      expect: { totals: { tax: 7.25 } }
+      kind: positive
+      notes: "CA standard rate 7.25%"
+    - input:
+        ship_jurisdiction: "US-OR"
+        items: [{ unit_price: 100.00, quantity: 1, tax_category: "standard" }]
+      expect: { totals: { tax: 0.00 } }
+      kind: edge
+      notes: "Oregon — no sales tax"
+  status: drift
+  confidence: high
+  drift_reason: |
+    Modern rounds per-line then sums; legacy sums per-line then rounds.
+    Difference is at most $0.01 per order. Decision in ADR-0023:
+    modern behavior is preferred (per-line rounding matches receipts).
+    Drift is intentional and customer-visible delta is documented.
+  reviewed_by: alex@example.com
+  reviewed_at: 2026-05-02
+  tags: [tax, pricing]

@@ -1,0 +1,111 @@
+# Example mask configuration for the differential shadow harness.
+# Generate via: propose-mask-rules skill, then refine manually.
+# Lives at: shadow/masks/<endpoint>.yaml
+
+endpoint:
+  legacy: POST /api/v2/orders/quote
+  modern: 'mutation { quoteOrder }'
+
+# Adapters project the two response shapes onto a canonical form before
+# diffing. Keep these in shadow/adapters/.
+canonical_shape:
+  legacy_projection: ./adapters/orders-quote.legacy.jq
+  modern_projection: ./adapters/orders-quote.modern.jq
+
+# Per-field mask rules. Applied AFTER projection.
+fields:
+  # ---- IDs ----
+  - path: $.quote_id
+    rule: mask
+    as: "<uuid>"
+    reason: "Server-generated UUID; never expected to match"
+
+  - path: $.line_items[*].line_id
+    rule: mask
+    as: "<uuid>"
+    reason: "Per-line UUID assigned at quote creation"
+
+  # ---- Timestamps ----
+  - path: $.created_at
+    rule: tolerance_time
+    window: 2s
+    reason: "Both systems call clock independently; ms drift expected"
+
+  - path: $.expires_at
+    rule: tolerance_time
+    window: 2s
+    reason: "Derived from created_at + TTL"
+
+  # ---- Ordering ----
+  - path: $.line_items[*]
+    rule: sort_by
+    by: [sku, variant_id]
+    reason: "Order not meaningful; legacy returns insert-order, modern returns sorted by SKU"
+
+  - path: $.tax_breakdown[*]
+    rule: sort_by
+    by: [jurisdiction]
+    reason: "Tax lines order is presentation-only"
+
+  # ---- Money: EXACT, no tolerance ----
+  - path: $.totals.subtotal
+    rule: exact
+    reason: "Money — any difference is a real bug"
+
+  - path: $.totals.tax
+    rule: exact
+    reason: "Money — drift here means rounding-mode or jurisdiction logic divergence"
+
+  - path: $.totals.discount
+    rule: exact
+    reason: "Money"
+
+  - path: $.totals.total
+    rule: exact
+    reason: "Money"
+
+  - path: $.line_items[*].unit_price
+    rule: exact
+    reason: "Money"
+
+  - path: $.line_items[*].extended_price
+    rule: exact
+    reason: "Money"
+
+  # ---- Legacy-only or modern-only fields ----
+  - path: $.debug
+    rule: ignore
+    reason: "Legacy-only diagnostic block; not part of contract"
+
+  - path: $.metadata.modern_quote_version
+    rule: ignore
+    reason: "Modern-only; legacy has no concept of quote schema versioning"
+
+  # ---- Null vs missing normalization ----
+  - path: $.line_items[*].discount_code
+    rule: normalize
+    null_equals_missing: true
+    reason: "Legacy returns null when absent; modern omits the key"
+
+  # ---- Recommendations (set-overlap rather than exact ordering) ----
+  - path: $.recommendations[*]
+    rule: set_overlap
+    min_jaccard: 0.8
+    reason: "Ranked recommendations may differ slightly; top-K overlap is the contract"
+
+# Severity drives routing of diff clusters. error blocks cutover.
+severity:
+  default: warn
+  overrides:
+    - path: $.totals.*
+      level: error
+      reason: "Money mismatches always escalate"
+    - path: $.errors[*]
+      level: error
+      reason: "Error semantics must match exactly"
+    - path: $.line_items[*].tax
+      level: error
+      reason: "Per-line tax differences indicate tax engine drift"
+    - path: $.recommendations[*]
+      level: info
+      reason: "Recommendations not contractually exact"

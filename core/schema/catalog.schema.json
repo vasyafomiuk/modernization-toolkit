@@ -1,0 +1,147 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/modernization-toolkit/rule-catalog.schema.json",
+  "title": "Rule Catalog",
+  "description": "Schema for rules/<domain>.yaml files in the modernization toolkit",
+  "type": "array",
+  "items": { "$ref": "#/definitions/Rule" },
+  "definitions": {
+    "Rule": {
+      "type": "object",
+      "required": ["id", "type", "domain", "description", "logic", "examples", "sources", "status", "confidence"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,5}-[A-Z]{3,5}-[0-9]{3,4}$",
+          "description": "Stable, immutable ID. Format: <DOMAIN>-<KIND>-<NUM>"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["validation", "calculation", "authorization", "state_transition", "side_effect"]
+        },
+        "domain": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$",
+          "description": "Lowercase domain name; must match filename"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 200,
+          "description": "One-sentence human-readable summary"
+        },
+        "trigger": {
+          "type": "string",
+          "description": "When the rule fires (e.g. 'order.total_computed')"
+        },
+        "preconditions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "logic": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Pseudocode — NOT source language"
+        },
+        "effect": {
+          "type": "string",
+          "description": "Postcondition or output"
+        },
+        "sources": {
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "legacy": { "$ref": "#/definitions/SourceList" },
+            "modern": { "$ref": "#/definitions/SourceList" }
+          },
+          "additionalProperties": false
+        },
+        "examples": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/definitions/Example" }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "extracted",
+            "implemented_unverified",
+            "implemented_verified",
+            "gap",
+            "drift",
+            "net_new",
+            "deprecated"
+          ]
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["high", "medium", "low"]
+        },
+        "notes": { "type": "string" },
+        "reviewed_by": { "type": "string", "format": "email" },
+        "reviewed_at": { "type": "string", "format": "date" },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "drift_reason": { "type": "string" },
+        "deprecated_reason": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "drift" } } },
+          "then": { "required": ["drift_reason"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "deprecated" } } },
+          "then": { "required": ["deprecated_reason"] }
+        },
+        {
+          "if": { "properties": { "confidence": { "const": "low" } } },
+          "then": { "required": ["notes"] }
+        }
+      ]
+    },
+    "SourceList": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Source" }
+    },
+    "Source": {
+      "type": "object",
+      "required": ["path", "symbol", "lines"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Repo-relative path"
+        },
+        "symbol": {
+          "type": "string",
+          "description": "Function, method, or procedure name"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "Example": {
+      "type": "object",
+      "required": ["input", "expect", "kind"],
+      "properties": {
+        "input": { "type": "object" },
+        "expect": { "type": "object" },
+        "kind": {
+          "type": "string",
+          "enum": ["positive", "negative", "edge"]
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}
