@@ -96,4 +96,3 @@ Use the dashboard as the team surface:
   issues.
 - Use Compare to search and inspect the legacy-to-modern mapping for a rule.
 - Use Map to see which PL/SQL/C# sources connect to which TypeScript services.
-- Use Runs to keep lint, diff, and verify outputs attached to the project.

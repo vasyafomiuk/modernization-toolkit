@@ -22,38 +22,28 @@ One YAML file per domain. The filename (without extension) MUST match the
 Use the same domain names you use for spec directories, source code paths,
 and DynamoDB partition strategies — keep the vocabulary consistent.
 
-## Linting
+## Validation
 
-```bash
-rules lint rules/orders.yaml          # one file
-rules lint rules/                     # all files
-```
-
-Lint checks:
-- Schema validity against `_schema.json`
-- ID uniqueness across all catalog files
-- Source paths exist in the repo
-- Examples are valid YAML objects with `kind` set
-- `confidence: low` rules have `notes`
-- `status: drift` rules have `drift_reason`
+Use `core/schema/catalog.schema.json` for editor validation, review checks, or
+your own CI workflow. The dashboard also expects each catalog file to parse as
+a YAML array of rules.
 
 ## Common operations
 
 ### Add a new rule
 
-1. Either use `rules extract` after wiring your AI provider, or hand-write
+1. Use the dashboard form, your preferred AI extraction workflow, or hand-write
    following the example file.
 2. Set `status: extracted` (or `net_new` for modern-only behavior).
-3. Run `rules lint` — fix any failures.
+3. Review the entry against the schema and source pointers.
 4. Open a PR. Reviewer assigns `reviewed_by` and `reviewed_at` on merge.
 
 ### Promote status
 
-Status transitions happen in two ways:
-- **Automatic**: `rules verify --promote` checks examples and bumps
-  `implemented_unverified` → `implemented_verified` for passing rules.
-- **Manual via shadow**: when the shadow harness reports clean for N days
-  on an endpoint, the harness's promotion job updates affected rules.
+Status transitions should come from evidence:
+- Example, property, or contract tests cover the catalog examples.
+- Shadow traffic has run clean for the endpoint's threshold window.
+- Manual review or ADRs explain intentional drift.
 
 NEVER manually edit a rule to set `status: implemented_verified`. That
 status is earned, not assigned.
@@ -83,7 +73,7 @@ data.
 |--------------------------|--------------------------------------------------|----------------------|
 | `extracted`              | AI extraction, awaiting human review            | Extract workflow     |
 | `implemented_unverified` | Code exists, examples not yet passing OR not yet verified by shadow | Human reviewer at promotion |
-| `implemented_verified`   | Examples pass AND shadow has seen real traffic clean | `rules verify` or shadow harness |
+| `implemented_verified`   | Examples pass AND shadow has seen real traffic clean | Test/shadow evidence |
 | `gap`                    | Legacy rule, no modern counterpart yet           | Linker or reviewer   |
 | `drift`                  | Legacy and modern differ intentionally           | Reviewer with ADR    |
 | `net_new`                | Modern-only, no legacy counterpart               | Reviewer             |

@@ -251,18 +251,6 @@
       color: var(--muted);
     }
 
-    .run-row {
-      padding: 8px 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      margin-bottom: 8px;
-      cursor: pointer;
-    }
-    .run-row:hover { border-color: var(--accent); }
-    .run-row .meta { display: flex; gap: 12px; align-items: center; }
-    .badge-ok { color: var(--green); }
-    .badge-fail { color: var(--red); }
-
     /* Forms */
     .form-grid {
       display: grid;
@@ -546,9 +534,6 @@
     <h2 id="project-title">No project selected</h2>
     <div class="row" id="project-actions" style="display:none">
       <button class="primary" id="action-add-rule">Add rule</button>
-      <button id="action-lint">Lint</button>
-      <button id="action-diff">Diff</button>
-      <button id="action-verify">Verify</button>
       <button id="action-status">Refresh status</button>
       <button class="danger" id="action-remove">Remove</button>
     </div>
@@ -561,7 +546,6 @@
     <div class="tab" data-tab="map">Map</div>
     <div class="tab" data-tab="compare">Compare</div>
     <div class="tab" data-tab="rules">Rules</div>
-    <div class="tab" data-tab="runs">Runs</div>
   </div>
 
   <div class="panel" id="panel">
@@ -577,7 +561,6 @@ const state = {
   selectedId: null,
   activeTab: "readiness",
   statusCache: {},
-  runsCache: {},
   rulesCache: {},
   currentFile: null,
   catalogCache: {},
@@ -678,7 +661,7 @@ $("#add-project-btn").onclick = () => {
   };
   const modal = el("div", { class: "modal" }, [
     el("h3", {}, "Register project"),
-    el("div", { class: "muted" }, "Point to a directory scaffolded with `rules init`, or any repo containing a rules/ folder."),
+    el("div", { class: "muted" }, "Point to any repo or workspace containing a rules/ folder."),
     nameInput,
     pathInput,
     error,
@@ -764,7 +747,6 @@ function invalidateProjectCaches(projectId) {
   delete state.statusCache[projectId];
   delete state.catalogCache[projectId];
   delete state.rulesCache[projectId];
-  delete state.runsCache[projectId];
 }
 
 function openAddRuleModal() {
@@ -889,9 +871,6 @@ function openAddRuleModal() {
 
 // --- Action buttons ---
 $("#action-add-rule").onclick = () => openAddRuleModal();
-$("#action-lint").onclick = () => runCmd("lint");
-$("#action-diff").onclick = () => runCmd("diff");
-$("#action-verify").onclick = () => runCmd("verify");
 $("#action-status").onclick = () => {
   delete state.statusCache[state.selectedId];
   if (state.activeTab === "status") renderStatus();
@@ -911,25 +890,6 @@ $("#action-remove").onclick = async () => {
   await loadProjects();
 };
 
-async function runCmd(command) {
-  const panel = $("#panel");
-  panel.innerHTML = "";
-  panel.appendChild(el("div", { class: "muted" }, `Running rules ${command}…`));
-  try {
-    const { run } = await api(`/api/projects/${state.selectedId}/run`, {
-      method: "POST",
-      body: { command },
-    });
-    state.activeTab = "runs";
-    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === "runs"));
-    delete state.runsCache[state.selectedId];
-    renderRuns(run.id);
-  } catch (err) {
-    panel.innerHTML = "";
-    panel.appendChild(el("div", { class: "muted" }, `Error: ${err.message}`));
-  }
-}
-
 // --- Tabs ---
 document.querySelectorAll(".tab").forEach((t) => {
   t.onclick = () => setTab(t.dataset.tab);
@@ -944,7 +904,6 @@ function setTab(tab) {
   else if (tab === "map") renderMap();
   else if (tab === "compare") renderCompare();
   else if (tab === "rules") renderRulesTab();
-  else if (tab === "runs") renderRuns();
 }
 
 // --- Status view ---
@@ -967,15 +926,7 @@ async function renderStatus() {
 
   panel.innerHTML = "";
 
-  if (!data.ok) {
-    panel.appendChild(el("div", { class: "muted" }, "Status command failed or returned non-JSON output."));
-    if (data.stderr) panel.appendChild(el("pre", { class: "output" }, data.stderr));
-    if (data.raw) panel.appendChild(el("pre", { class: "output" }, data.raw));
-    return;
-  }
-
   const status = data.status;
-  // Status JSON from the CLI is shaped { [domain]: { [statusName]: count } }.
   if (status && typeof status === "object" && !Array.isArray(status)) {
     renderStatusTable(panel, status);
   } else {
@@ -2110,53 +2061,6 @@ function renderSide(rule, side) {
   col.appendChild(el("pre", { class: "logic" }, rule.logic || "(no logic recorded)"));
 
   return col;
-}
-
-// --- Runs view ---
-async function renderRuns(highlightId) {
-  const panel = $("#panel");
-  panel.innerHTML = "";
-  panel.appendChild(el("div", { class: "muted" }, "Loading runs…"));
-
-  let runs = state.runsCache[state.selectedId];
-  if (!runs) {
-    try {
-      const data = await api(`/api/projects/${state.selectedId}/runs`);
-      runs = data.runs;
-      state.runsCache[state.selectedId] = runs;
-    } catch (err) {
-      panel.innerHTML = "";
-      panel.appendChild(el("div", { class: "muted" }, `Error: ${err.message}`));
-      return;
-    }
-  }
-
-  panel.innerHTML = "";
-  if (runs.length === 0) {
-    panel.appendChild(el("div", { class: "muted" }, "No runs yet. Use the action buttons above to trigger one."));
-    return;
-  }
-  for (const r of runs) {
-    const expanded = r.id === highlightId;
-    const row = el("div", { class: "run-row" }, [
-      el("div", { class: "meta" }, [
-        el("strong", {}, r.command),
-        el("span", { class: r.exit_code === 0 ? "badge-ok" : "badge-fail" }, r.exit_code === 0 ? "✓ ok" : `✗ exit ${r.exit_code}`),
-        el("span", { class: "muted mono" }, new Date(r.started_at).toLocaleString()),
-      ]),
-    ]);
-    let body = null;
-    if (expanded) {
-      body = el("pre", { class: "output" }, r.output || "(no output)");
-      row.appendChild(body);
-    }
-    row.onclick = () => {
-      if (body) { body.remove(); body = null; return; }
-      body = el("pre", { class: "output" }, r.output || "(no output)");
-      row.appendChild(body);
-    };
-    panel.appendChild(row);
-  }
 }
 
 // --- Init ---

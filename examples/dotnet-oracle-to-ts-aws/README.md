@@ -37,21 +37,18 @@ Copy the portable artifacts into your repo:
 cp -R examples/dotnet-oracle-to-ts-aws/rules YOUR_REPO/
 cp -R examples/dotnet-oracle-to-ts-aws/shadow YOUR_REPO/
 cp -R core/schema YOUR_REPO/rules/.schema
-
-mkdir -p YOUR_REPO/tools
-cp -R core/cli YOUR_REPO/tools/rules-cli
-cd YOUR_REPO/tools/rules-cli
-npm install
-npm run build
-npm link
 ```
 
-Then run:
+Then start the dashboard from this repository:
 
 ```bash
-rules lint
-rules dashboard
+cd core/dashboard
+npm install
+npm run build
+npm start
 ```
+
+Register `YOUR_REPO` in the dashboard.
 
 ## Things This Example Demonstrates
 

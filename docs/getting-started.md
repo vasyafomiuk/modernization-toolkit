@@ -1,46 +1,31 @@
 # Getting Started
 
-A practical walkthrough for adopting the toolkit with only portable catalog,
-dashboard, CLI, and shadow-harness artifacts.
+A practical walkthrough for adopting the toolkit as a dashboard-first tracker.
 
 ## Path A: I have a stack close to an existing example
 
-Copy the closest example and install the CLI:
+Copy the closest example and run the dashboard:
 
 ```bash
 # From a fresh clone of this repo
 cp -R examples/<closest-match>/. YOUR_REPO/
-
-# Pull universal schema and CLI pieces from core/
 cp -R core/schema YOUR_REPO/rules/.schema
-mkdir -p YOUR_REPO/tools
-cp -R core/cli YOUR_REPO/tools/rules-cli
 
-cd YOUR_REPO/tools/rules-cli
+cd core/dashboard
 npm install
 npm run build
-npm link
-
-rules lint
-rules dashboard
+npm start
 ```
 
-Then adapt:
-
-1. Edit `rules/<domain>.yaml` for your domains, source paths, owners, and
-   cutover metadata.
-2. Edit or add `shadow/masks/*.yaml` for endpoints you plan to shadow.
-3. Wire `rules extract`, `rules link`, and `rules verify` to your AI provider
-   and test runner when you are ready to automate more of the loop.
+Then register `YOUR_REPO` in the dashboard.
 
 ## Path B: I have a novel stack
 
-Start with the universal pieces only:
+Create the portable catalog structure:
 
 ```bash
-mkdir -p YOUR_REPO/rules YOUR_REPO/tools
+mkdir -p YOUR_REPO/rules YOUR_REPO/shadow/masks
 cp -R core/schema YOUR_REPO/rules/.schema
-cp -R core/cli YOUR_REPO/tools/rules-cli
 ```
 
 Create one catalog file per domain:
@@ -75,19 +60,20 @@ Read in order:
 ## Day-1 Loop
 
 1. Pick a domain that is read-heavy, low-criticality, and well understood.
-2. Extract rules from one legacy file, stored procedure, job, or endpoint.
+2. Extract rules from one legacy file, stored procedure, job, or endpoint with
+   your preferred AI workflow.
 3. Review the extracted YAML and promote good entries into `rules/<domain>.yaml`.
 4. Link each rule to modern TypeScript service-layer sources as they are built.
-5. Add example tests, property tests, and shadow evidence.
-6. Use `rules dashboard` daily to catch gaps, unmapped endpoints, missing tests,
-   and unverified implementations.
+5. Add example tests, property tests, and shadow evidence references.
+6. Use the dashboard daily to catch gaps, unmapped endpoints, missing tests, and
+   unverified implementations.
 
 ## When Things Go Wrong
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| `rules lint` reports schema errors | Catalog drifted from schema | Check `core/schema/catalog.schema.json` |
+| Dashboard cannot load a catalog | YAML does not match the catalog shape | Check `core/schema/catalog.schema.json` |
 | Lots of `confidence: low` extractions | Source chunk is too broad | Re-extract one procedure or symbol at a time |
-| Linker proposes wrong matches | Similarity threshold is too low | Pass `--threshold 0.95` to `rules link` |
+| Rule mapping looks wrong | Legacy and modern behavior were linked too eagerly | Mark as `gap` or `drift` until reviewed |
 | Shadow harness is too noisy | Cosmetic diffs are under-masked | Review diff clusters and add narrow masks |
 | Shadow harness is suspiciously quiet | Important fields are over-masked | Audit masks; never mask money, auth, state, or errors |

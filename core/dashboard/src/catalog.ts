@@ -40,7 +40,7 @@ export async function loadAllCatalogs(rulesDir: string): Promise<CatalogFile[]> 
 }
 
 /**
- * Load a single catalog file (used by lint with a specific path).
+ * Load a single catalog file.
  */
 export async function loadCatalogFile(filePath: string): Promise<CatalogFile> {
   const text = await fs.readFile(filePath, "utf8");
@@ -60,8 +60,7 @@ export function flattenCatalogs(catalogs: CatalogFile[]): Array<{ rule: Rule; fr
 }
 
 /**
- * Find rules affected by a list of source code paths. Used by
- * `rules verify --changed-since` to scope verification to relevant rules.
+ * Find rules affected by a list of source code paths.
  */
 export function findRulesForSourcePaths(
   catalogs: CatalogFile[],
@@ -85,7 +84,7 @@ export function findRulesForSourcePaths(
 }
 
 /**
- * Group rules by domain and status for the `status` command.
+ * Group rules by domain and status for dashboard summaries.
  */
 export function statusRollup(
   catalogs: CatalogFile[],

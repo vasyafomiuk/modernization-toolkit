@@ -70,11 +70,10 @@ The catalog has a seven-value status enum:
 | `deprecated`             | Obsolete, kept for history                           |
 
 The discipline is: **`implemented_verified` is never set by hand.** It's
-only set by the verification CLI when all examples pass, or by the shadow
-harness when N days have passed clean. This is the single most important
-property of the catalog. If anyone can write `implemented_verified` in a
-YAML file, the field stops meaning anything, and cutover decisions made
-against it become unreliable.
+only set when test evidence and/or shadow evidence supports the rule. This is
+the single most important property of the catalog. If anyone can write
+`implemented_verified` without evidence, the field stops meaning anything, and
+cutover decisions made against it become unreliable.
 
 The same discipline applies to `drift`: it requires a `drift_reason`
 field that has to be non-empty. Drift is permitted but must be
@@ -182,7 +181,7 @@ Honest accounting:
   bureaucratic on small changes. The hooks make most of it automatic.
 
 - **One more artifact to maintain.** The catalog has to evolve with
-  the code. The lint rule against orphan source paths catches the
+  the code. Schema checks and review against source paths catch the
   common drift, but it's still a thing to keep alive.
 
 The toolkit assumes you're doing a modernization that's serious enough

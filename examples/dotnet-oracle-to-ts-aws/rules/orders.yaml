@@ -1,6 +1,5 @@
 # Example rule catalog: orders domain
 # This file demonstrates the catalog format with realistic rules.
-# Lint with: rules lint rules/_example-orders.yaml
 
 - id: ORD-CALC-007
   type: calculation

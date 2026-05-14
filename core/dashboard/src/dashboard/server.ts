@@ -16,16 +16,14 @@ import {
   apiGetStatus,
   apiListProjects,
   apiListRuleFiles,
-  apiListRuns,
   apiReadRuleFile,
-  apiRunCommand,
   apiWriteRuleFile,
 } from "./api.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // From dist/dashboard/server.js -> ../../static/index.html resolves to
-// core/cli/static/index.html (sibling of dist/).
+// core/dashboard/static/index.html (sibling of dist/).
 const STATIC_DIR = path.resolve(__dirname, "../../static");
 
 interface Route {
@@ -63,17 +61,6 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/api\/projects\/(\d+)\/catalog$/,
     handler: (db, m) => apiGetCatalog(db, Number(m[1])),
-  },
-  {
-    method: "POST",
-    pattern: /^\/api\/projects\/(\d+)\/run$/,
-    handler: (db, m, body) =>
-      apiRunCommand(db, Number(m[1]), body as { command?: string; args?: string[] }),
-  },
-  {
-    method: "GET",
-    pattern: /^\/api\/projects\/(\d+)\/runs$/,
-    handler: (db, m) => apiListRuns(db, Number(m[1])),
   },
   {
     method: "GET",

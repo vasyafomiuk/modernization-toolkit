@@ -1,28 +1,22 @@
 {
-  "name": "@modernization-toolkit/rules-cli",
+  "name": "@modernization-toolkit/dashboard",
   "version": "0.1.0",
-  "description": "CLI for managing the modernization rule catalog",
+  "description": "Local dashboard for tracking modernization rule catalogs",
   "type": "module",
-  "bin": {
-    "rules": "./dist/index.js"
-  },
   "files": [
     "dist",
     "static"
   ],
   "scripts": {
     "build": "tsc",
-    "dev": "tsx src/index.ts",
+    "dev": "tsx src/dashboard/index.ts",
+    "start": "node dist/dashboard/index.js",
     "test": "vitest run",
-    "lint": "tsc --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "ajv": "^8.12.0",
-    "ajv-formats": "^2.1.1",
     "better-sqlite3": "^11.10.0",
-    "commander": "^11.1.0",
     "glob": "^10.3.10",
-    "kleur": "^4.1.5",
     "yaml": "^2.3.4"
   },
   "devDependencies": {

@@ -1,7 +1,7 @@
 # Modernization Toolkit
 
-A toolkit for AI-assisted modernization of legacy systems — rule catalog,
-differential-testing scaffolding, dashboard, and CLI to tie them together.
+A toolkit for AI-assisted modernization of legacy systems: a rule catalog,
+differential-testing scaffolding, and a local dashboard to track the work.
 
 Built to address a specific failure mode: AI agents that produce confident,
 plausible-looking code during modernization without the infrastructure to
@@ -16,12 +16,9 @@ Two things, layered:
    you can compare them across stacks instead of comparing implementations
    that aren't directly comparable.
 
-2. **A CLI + dashboard** (`rules`) — wraps the catalog operations in something scriptable
-   for CI and day-to-day work. Lint, status rollup, gap diff, verification.
-   It also ships a local dashboard for tracking readiness by app,
-   capability, endpoint, owner, priority, and shadow-test state, plus a
-   searchable rule comparison view, gap radar, source map, and structured
-   add-rule flow.
+2. **A local dashboard** — tracks readiness by app, capability, endpoint,
+   owner, priority, and shadow-test state, plus a searchable rule comparison
+   view, gap radar, source map, status rollup, and structured add-rule flow.
 
 ## What this isn't
 
@@ -37,7 +34,7 @@ Two things, layered:
 ## Layout
 
 ```
-core/        Universal: schema, CLI, dashboard, and shadow harness contract
+core/        Universal: schema, dashboard, and shadow harness contract
 examples/    Concrete instantiations for specific stacks
 docs/        Concepts, getting started, references
 ```
@@ -79,9 +76,9 @@ work as-is regardless of stack.
 
 ## Status
 
-This is a starting point, not a finished product. The CLI's `verify`,
-`extract`, and `link` commands are scaffolded with clear integration
-points for plugging in an AI provider and your project's test runner.
+This is a starting point, not a finished product. The dashboard is local-first:
+catalog YAML remains the source of truth, while the UI makes gaps, mappings,
+owners, and verification evidence easier to manage.
 
 ## Why this exists
 
