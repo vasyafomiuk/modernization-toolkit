@@ -8,6 +8,7 @@ From the repo root:
 
 ```bash
 cd tools/rules-cli
+nvm use   # Node 20, matching .nvmrc
 npm install
 npm run build
 npm link   # makes `rules` available globally
@@ -30,12 +31,14 @@ rules dashboard --db ./local.db       # alternate DB location
 
 **Features**
 - Register projects by absolute path (typically created via `rules init`)
+- Readiness rollup by app, capability, and endpoint, including owners,
+  priority, criticality, blockers, and shadow status
 - Per-project status rollup — calls `rules status --format json` and renders
   counts by domain and rule status, with a verified/gaps/drift/unreviewed
   summary strip
 - One-click `lint` / `diff` / `verify` triggers; output streamed back and
   persisted in the runs log
-- Browse and edit YAML rule files inline; saves go straight to disk
+- Browse, compare, map, and edit YAML rule files inline; saves go straight to disk
 
 **Endpoints** (all under `http://<host>:<port>/api`):
 

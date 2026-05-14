@@ -30,6 +30,46 @@
           "maxLength": 200,
           "description": "One-sentence human-readable summary"
         },
+        "app": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Application or bounded system this rule belongs to"
+        },
+        "capability": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Business capability supported by this rule"
+        },
+        "endpoint": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Endpoint, job, event, or workflow this rule affects"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Team or person accountable for closing this rule"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["P0", "P1", "P2", "P3"],
+          "description": "Delivery priority for modernization planning"
+        },
+        "criticality": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "description": "Business impact if this rule is wrong or missing"
+        },
+        "target_release": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Release, milestone, or date this rule is targeting"
+        },
+        "jira_ticket": {
+          "type": "string",
+          "minLength": 1,
+          "description": "External delivery tracker reference"
+        },
         "trigger": {
           "type": "string",
           "description": "When the rule fires (e.g. 'order.total_computed')"
@@ -86,6 +126,36 @@
         },
         "drift_reason": { "type": "string" },
         "deprecated_reason": { "type": "string" },
+        "shadow_status": {
+          "type": "string",
+          "enum": ["not_configured", "warming", "clean", "diffs", "blocked"],
+          "description": "Latest known shadow-testing state for this rule"
+        },
+        "shadow_clean_days": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Consecutive clean shadow days observed for this rule"
+        },
+        "last_verified_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the last successful verification signal"
+        },
+        "verification_evidence": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/VerificationEvidence" },
+          "description": "References to tests, CI runs, shadow runs, or review evidence"
+        },
+        "adr_refs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Architecture decision records relevant to this rule"
+        },
+        "test_refs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Test files, suites, or cases covering this rule"
+        },
         "tags": {
           "type": "array",
           "items": { "type": "string" }
@@ -142,6 +212,33 @@
         },
         "notes": { "type": "string" }
       }
+    },
+    "VerificationEvidence": {
+      "type": "object",
+      "required": ["kind", "ref", "status"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["example_test", "property_test", "shadow_run", "ci_run", "manual_review"]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Evidence reference, such as a test path, CI URL, run ID, or review link"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["passed", "failed", "pending", "accepted"]
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

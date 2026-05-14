@@ -114,6 +114,77 @@
     th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
     tr:last-child td { border-bottom: none; }
 
+    /* Readiness */
+    .readiness-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .readiness-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .readiness-card .label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .readiness-card .value {
+      margin-top: 2px;
+      font-family: var(--mono);
+      font-size: 20px;
+    }
+    .readiness-table tr { cursor: pointer; }
+    .readiness-table tbody tr:hover { background: var(--panel); }
+    .state-badge {
+      display: inline-block;
+      min-width: 72px;
+      text-align: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: var(--mono);
+    }
+    .state-ready { background: #14331e; color: var(--green); }
+    .state-verifying { background: #3a2f10; color: var(--yellow); }
+    .state-review { background: #2a313f; color: var(--muted); }
+    .state-blocked { background: #3a1416; color: var(--red); }
+    .state-unmapped { background: #122944; color: var(--blue); }
+    .priority-pill {
+      display: inline-block;
+      min-width: 28px;
+      text-align: center;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--panel-2);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    .progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 140px;
+    }
+    .progress-track {
+      width: 90px;
+      height: 6px;
+      background: var(--panel-2);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--green);
+      border-radius: 999px;
+    }
+    .next-action {
+      max-width: 260px;
+      color: var(--muted);
+    }
+
     .pill {
       display: inline-block;
       padding: 2px 8px;
@@ -374,7 +445,8 @@
   </header>
 
   <div class="tabs" id="tabs" style="display:none">
-    <div class="tab active" data-tab="status">Status</div>
+    <div class="tab active" data-tab="readiness">Readiness</div>
+    <div class="tab" data-tab="status">Status</div>
     <div class="tab" data-tab="map">Map</div>
     <div class="tab" data-tab="compare">Compare</div>
     <div class="tab" data-tab="rules">Rules</div>
@@ -392,7 +464,7 @@
 const state = {
   projects: [],
   selectedId: null,
-  activeTab: "status",
+  activeTab: "readiness",
   statusCache: {},
   runsCache: {},
   rulesCache: {},
@@ -557,7 +629,8 @@ document.querySelectorAll(".tab").forEach((t) => {
 function setTab(tab) {
   state.activeTab = tab;
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tab));
-  if (tab === "status") renderStatus();
+  if (tab === "readiness") renderReadiness();
+  else if (tab === "status") renderStatus();
   else if (tab === "map") renderMap();
   else if (tab === "compare") renderCompare();
   else if (tab === "rules") renderRulesTab();
@@ -649,6 +722,241 @@ function renderStatusTable(panel, status) {
   }
   table.appendChild(tbody);
   panel.appendChild(table);
+}
+
+// --- Readiness view ---
+async function renderReadiness() {
+  const panel = $("#panel");
+  panel.innerHTML = "";
+  panel.appendChild(el("div", { class: "muted" }, "Loading readiness…"));
+
+  let catalogs;
+  try {
+    catalogs = await loadCatalogIfNeeded();
+  } catch (err) {
+    panel.innerHTML = "";
+    panel.appendChild(el("div", { class: "muted" }, `Error: ${err.message}`));
+    return;
+  }
+
+  const groups = buildReadinessGroups(catalogs);
+  panel.innerHTML = "";
+
+  if (groups.length === 0) {
+    panel.appendChild(el("div", { class: "muted" }, "No rules in this catalog yet."));
+    return;
+  }
+
+  const activeRules = groups.reduce((sum, g) => sum + g.activeCount, 0);
+  const verifiedRules = groups.reduce((sum, g) => sum + g.counts.implemented_verified, 0);
+  const readyGroups = groups.filter((g) => g.state === "ready").length;
+  const blockedGroups = groups.filter((g) => g.state === "blocked").length;
+  const unmappedGroups = groups.filter((g) => g.state === "unmapped").length;
+  const verifiedPct = activeRules > 0 ? Math.round((100 * verifiedRules) / activeRules) : 0;
+
+  panel.appendChild(el("div", { class: "readiness-summary" }, [
+    readinessCard("Endpoints", String(groups.length)),
+    readinessCard("Ready", String(readyGroups)),
+    readinessCard("Blocked", String(blockedGroups)),
+    readinessCard("Unmapped", String(unmappedGroups)),
+    readinessCard("Rules verified", `${verifiedPct}%`),
+  ]));
+
+  const table = el("table", { class: "readiness-table" });
+  table.appendChild(el("thead", {}, [
+    el("tr", {}, [
+      el("th", {}, "App / capability / endpoint"),
+      el("th", {}, "Owner"),
+      el("th", {}, "Priority"),
+      el("th", {}, "Criticality"),
+      el("th", {}, "State"),
+      el("th", {}, "Verified"),
+      el("th", {}, "Blockers"),
+      el("th", {}, "Shadow"),
+      el("th", {}, "Next action"),
+    ]),
+  ]));
+
+  const tbody = el("tbody");
+  for (const g of groups) {
+    const row = el("tr", {
+      onclick: () => {
+        state.selectedRuleId = g.rules[0].id;
+        state.compareFilter = "all";
+        setTab("compare");
+      },
+    }, [
+      el("td", {}, [
+        el("div", { class: "mono" }, g.app),
+        el("div", {}, g.capability),
+        el("div", { class: g.unmapped ? "muted" : "mono muted" }, g.endpoint),
+      ]),
+      el("td", {}, g.owner),
+      el("td", {}, el("span", { class: "priority-pill" }, g.priority)),
+      el("td", {}, g.criticality),
+      el("td", {}, stateBadge(g.state)),
+      el("td", {}, progressCell(g.verifiedPct)),
+      el("td", { class: "mono" }, blockerLabel(g)),
+      el("td", {}, shadowLabel(g)),
+      el("td", { class: "next-action" }, g.nextAction),
+    ]);
+    tbody.appendChild(row);
+  }
+  table.appendChild(tbody);
+  panel.appendChild(table);
+}
+
+function readinessCard(label, value) {
+  return el("div", { class: "readiness-card" }, [
+    el("div", { class: "label" }, label),
+    el("div", { class: "value" }, value),
+  ]);
+}
+
+function buildReadinessGroups(catalogs) {
+  const groups = new Map();
+  for (const c of catalogs) {
+    for (const rule of c.rules) {
+      const app = rule.app || "Unassigned app";
+      const capability = rule.capability || rule.domain || c.domain || "Unassigned capability";
+      const endpoint = rule.endpoint || "Unmapped endpoint";
+      const key = `${app}\u0000${capability}\u0000${endpoint}`;
+      let group = groups.get(key);
+      if (!group) {
+        group = { app, capability, endpoint, unmapped: !rule.endpoint, rules: [] };
+        groups.set(key, group);
+      }
+      group.unmapped = group.unmapped || !rule.endpoint;
+      group.rules.push(rule);
+    }
+  }
+
+  return [...groups.values()]
+    .map(finalizeReadinessGroup)
+    .sort((a, b) => {
+      const stateOrder = { blocked: 0, review: 1, verifying: 2, unmapped: 3, ready: 4 };
+      const stateDelta = stateOrder[a.state] - stateOrder[b.state];
+      if (stateDelta !== 0) return stateDelta;
+      const priorityOrder = { P0: 0, P1: 1, P2: 2, P3: 3, "-": 4, Mixed: 5 };
+      const priorityDelta = (priorityOrder[a.priority] ?? 6) - (priorityOrder[b.priority] ?? 6);
+      if (priorityDelta !== 0) return priorityDelta;
+      return `${a.app} ${a.capability} ${a.endpoint}`.localeCompare(`${b.app} ${b.capability} ${b.endpoint}`);
+    });
+}
+
+function finalizeReadinessGroup(group) {
+  const activeRules = group.rules.filter((r) => r.status !== "deprecated");
+  const counts = Object.fromEntries(STATUSES.map((s) => [s, 0]));
+  for (const rule of group.rules) counts[rule.status] = (counts[rule.status] || 0) + 1;
+
+  const shadow = aggregateShadowStatus(activeRules);
+  const activeCount = activeRules.length;
+  const verifiedPct = activeCount > 0
+    ? Math.round((100 * counts.implemented_verified) / activeCount)
+    : 100;
+
+  const groupWithCounts = {
+    ...group,
+    activeCount,
+    counts,
+    owner: mixedField(activeRules, "owner", "-"),
+    priority: mixedField(activeRules, "priority", "-"),
+    criticality: mixedField(activeRules, "criticality", "-"),
+    shadow,
+    verifiedPct,
+  };
+
+  groupWithCounts.state = readinessState(groupWithCounts);
+  groupWithCounts.nextAction = nextReadinessAction(groupWithCounts);
+  return groupWithCounts;
+}
+
+function mixedField(rules, field, fallback) {
+  const values = [...new Set(rules.map((r) => r[field]).filter(Boolean))];
+  if (values.length === 0) return fallback;
+  if (values.length === 1) return values[0];
+  return "Mixed";
+}
+
+function aggregateShadowStatus(rules) {
+  const rank = {
+    clean: 1,
+    not_configured: 2,
+    warming: 3,
+    diffs: 4,
+    blocked: 5,
+  };
+  let worst = "unknown";
+  let worstRank = 0;
+  for (const rule of rules) {
+    const status = rule.shadow_status;
+    const nextRank = rank[status] || 0;
+    if (nextRank > worstRank) {
+      worst = status;
+      worstRank = nextRank;
+    }
+  }
+  return worst;
+}
+
+function readinessState(group) {
+  if (group.shadow === "blocked" || group.shadow === "diffs" || group.counts.gap > 0) return "blocked";
+  if (group.counts.extracted > 0) return "review";
+  if (group.counts.implemented_unverified > 0 || group.shadow === "warming" || group.shadow === "not_configured") return "verifying";
+  if (group.unmapped) return "unmapped";
+  return "ready";
+}
+
+function nextReadinessAction(group) {
+  if (group.shadow === "blocked") return "Resolve blocked shadow harness signal.";
+  if (group.shadow === "diffs") return "Classify shadow diffs and fix or accept drift.";
+  if (group.counts.gap > 0) return `${group.counts.gap} legacy rule(s) need a modern counterpart.`;
+  if (group.counts.extracted > 0) return `${group.counts.extracted} extracted rule(s) need human review.`;
+  if (group.counts.implemented_unverified > 0) return `${group.counts.implemented_unverified} implemented rule(s) need verification.`;
+  if (group.shadow === "warming") return "Wait for clean shadow threshold or promote with evidence.";
+  if (group.shadow === "not_configured") return "Attach shadow evidence or document why it is not required.";
+  if (group.unmapped) return "Add endpoint metadata to close the tracking gap.";
+  if (group.counts.drift > 0) return "Ready with documented drift; include ADR in cutover review.";
+  return "Ready for cutover gate review.";
+}
+
+function stateBadge(state) {
+  const label = {
+    ready: "ready",
+    verifying: "verifying",
+    review: "review",
+    blocked: "blocked",
+    unmapped: "unmapped",
+  }[state] || state;
+  return el("span", { class: `state-badge state-${state}` }, label);
+}
+
+function progressCell(percent) {
+  return el("div", { class: "progress-wrap" }, [
+    el("div", { class: "progress-track" }, [
+      el("div", { class: "progress-fill", style: `width:${Math.max(0, Math.min(100, percent))}%` }),
+    ]),
+    el("span", { class: "mono" }, `${percent}%`),
+  ]);
+}
+
+function blockerLabel(group) {
+  const parts = [];
+  if (group.counts.gap) parts.push(`${group.counts.gap} gap`);
+  if (group.counts.extracted) parts.push(`${group.counts.extracted} review`);
+  if (group.counts.implemented_unverified) parts.push(`${group.counts.implemented_unverified} verify`);
+  if (group.shadow === "diffs" || group.shadow === "blocked") parts.push(group.shadow);
+  return parts.length ? parts.join(", ") : "-";
+}
+
+function shadowLabel(group) {
+  if (group.shadow === "unknown") return el("span", { class: "muted" }, "unknown");
+  const days = Math.max(
+    0,
+    ...group.rules
+      .map((r) => Number.isFinite(r.shadow_clean_days) ? r.shadow_clean_days : 0),
+  );
+  return el("span", { class: "mono" }, days > 0 ? `${group.shadow} (${days}d)` : group.shadow);
 }
 
 // --- Rules editor ---

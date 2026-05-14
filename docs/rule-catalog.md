@@ -105,3 +105,40 @@ data.
 
 When in doubt: would a non-technical domain expert recognize this as a
 rule of the business? If yes → catalog. If no → not catalog.
+
+## Delivery and readiness metadata
+
+Rules can also carry optional delivery metadata so the dashboard can roll
+business behavior up into modernization progress:
+
+```yaml
+app: commerce-web
+capability: Checkout pricing
+endpoint: POST /orders/quote
+owner: checkout-modernization
+priority: P0
+criticality: critical
+target_release: "2026-Q2"
+jira_ticket: MOD-101
+shadow_status: clean
+shadow_clean_days: 14
+last_verified_at: "2026-04-26T10:15:00Z"
+verification_evidence:
+  - kind: shadow_run
+    ref: shadow/orders-quote/2026-04-26
+    status: passed
+    at: "2026-04-26T10:15:00Z"
+test_refs:
+  - modern/src/domain/orders/pricing/discount.test.ts
+adr_refs:
+  - ADR-0023
+```
+
+These fields do not replace rule status. Status still answers "what is the
+behavioral truth of this rule?" Delivery metadata answers "who owns it, where
+does it surface, and what evidence supports the cutover decision?"
+
+Use `endpoint` broadly: HTTP route, batch job, event name, workflow step, or
+screen action. The dashboard groups by `app + capability + endpoint`; rules
+without endpoint metadata are still shown as unmapped so teams can close the
+tracking gap.

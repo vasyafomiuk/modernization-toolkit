@@ -23,6 +23,8 @@ Three things, layered:
 
 3. **A CLI** (`rules`) — wraps the catalog operations in something scriptable
    for CI and day-to-day work. Lint, status rollup, gap diff, verification.
+   It also ships a local dashboard for tracking readiness by app,
+   capability, endpoint, owner, priority, and shadow-test state.
 
 ## What this isn't
 

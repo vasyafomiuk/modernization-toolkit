@@ -6,6 +6,14 @@
   type: calculation
   domain: orders
   description: Gold-tier customers get 15% off orders >= $100, capped at $50
+  app: commerce-web
+  capability: Checkout pricing
+  endpoint: POST /orders/quote
+  owner: checkout-modernization
+  priority: P0
+  criticality: critical
+  target_release: "2026-Q2"
+  jira_ticket: MOD-101
   trigger: order.total_computed
   preconditions:
     - customer.tier == "GOLD"
@@ -42,6 +50,20 @@
       kind: negative
   status: implemented_verified
   confidence: high
+  shadow_status: clean
+  shadow_clean_days: 14
+  last_verified_at: "2026-04-26T10:15:00Z"
+  verification_evidence:
+    - kind: shadow_run
+      ref: shadow/orders-quote/2026-04-26
+      status: passed
+      at: "2026-04-26T10:15:00Z"
+    - kind: example_test
+      ref: modern/src/domain/orders/pricing/discount.test.ts
+      status: passed
+      at: "2026-04-12T16:40:00Z"
+  test_refs:
+    - modern/src/domain/orders/pricing/discount.test.ts
   notes: |
     Money uses Decimal.js on modern side, C# decimal on legacy. Banker's
     rounding (half-to-even) on both. Verified against shadow harness
@@ -54,6 +76,14 @@
   type: validation
   domain: orders
   description: Orders shipping to embargoed countries are rejected
+  app: commerce-web
+  capability: Checkout compliance
+  endpoint: POST /orders/submit
+  owner: compliance-modernization
+  priority: P0
+  criticality: critical
+  target_release: "2026-Q2"
+  jira_ticket: MOD-118
   preconditions:
     - order has ship_country
   logic: |
@@ -78,6 +108,16 @@
       notes: "XX is in the embargoed list per test fixtures"
   status: implemented_verified
   confidence: high
+  shadow_status: clean
+  shadow_clean_days: 11
+  last_verified_at: "2026-04-27T09:05:00Z"
+  verification_evidence:
+    - kind: shadow_run
+      ref: shadow/orders-submit/2026-04-27
+      status: passed
+      at: "2026-04-27T09:05:00Z"
+  test_refs:
+    - modern/src/domain/orders/validation/embargo.test.ts
   notes: |
     Embargoed list is sourced from compliance/embargoed_countries.json
     in modern; from EMBARGOED_COUNTRIES table in legacy. Sync via CDC.
@@ -89,6 +129,14 @@
   type: authorization
   domain: orders
   description: Only the owner or an admin can edit an order in DRAFT status
+  app: commerce-web
+  capability: Order management
+  endpoint: PATCH /orders/{id}
+  owner: order-management
+  priority: P1
+  criticality: high
+  target_release: "2026-Q2"
+  jira_ticket: MOD-133
   preconditions:
     - order.status == "DRAFT"
   logic: |
@@ -123,6 +171,20 @@
       notes: admin override
   status: implemented_verified
   confidence: high
+  shadow_status: clean
+  shadow_clean_days: 8
+  last_verified_at: "2026-04-29T14:22:00Z"
+  verification_evidence:
+    - kind: example_test
+      ref: modern/src/domain/orders/authz/canEdit.test.ts
+      status: passed
+      at: "2026-04-18T18:10:00Z"
+    - kind: shadow_run
+      ref: shadow/orders-edit/2026-04-29
+      status: passed
+      at: "2026-04-29T14:22:00Z"
+  test_refs:
+    - modern/src/domain/orders/authz/canEdit.test.ts
   reviewed_by: jane@example.com
   reviewed_at: 2026-04-18
 
@@ -130,6 +192,14 @@
   type: state_transition
   domain: orders
   description: Orders move DRAFT -> SUBMITTED when all items are in stock
+  app: commerce-web
+  capability: Order submission
+  endpoint: POST /orders/{id}/submit
+  owner: order-management
+  priority: P0
+  criticality: critical
+  target_release: "2026-Q2"
+  jira_ticket: MOD-147
   preconditions:
     - order.status == "DRAFT"
   logic: |
@@ -161,6 +231,15 @@
       notes: already submitted
   status: implemented_unverified
   confidence: medium
+  shadow_status: warming
+  shadow_clean_days: 3
+  verification_evidence:
+    - kind: shadow_run
+      ref: shadow/orders-submit/2026-05-02
+      status: pending
+      at: "2026-05-02T08:00:00Z"
+  test_refs:
+    - modern/src/domain/orders/lifecycle/submit.test.ts
   notes: |
     Shadow harness sees 0 diffs in 3 days but threshold for promotion
     to implemented_verified is 7 days clean.
@@ -169,6 +248,14 @@
   type: side_effect
   domain: orders
   description: When an order ships, send shipment-confirmation email and write audit record
+  app: commerce-web
+  capability: Fulfillment notifications
+  endpoint: "event: order.shipped"
+  owner: fulfillment-modernization
+  priority: P2
+  criticality: medium
+  target_release: "2026-Q3"
+  jira_ticket: MOD-166
   trigger: order.status -> "SHIPPED"
   logic: |
     on order.status -> "SHIPPED":
@@ -188,6 +275,16 @@
       kind: negative
   status: net_new
   confidence: high
+  shadow_status: not_configured
+  verification_evidence:
+    - kind: manual_review
+      ref: ADR-0017
+      status: accepted
+      at: "2026-04-20T12:00:00Z"
+  adr_refs:
+    - ADR-0017
+  test_refs:
+    - modern/src/domain/orders/events/onShipped.test.ts
   notes: |
     Modern-only. Legacy emitted these via a nightly batch job (PKG_NOTIFICATIONS).
     Moved to event-driven in modern. Tracked in ADR-0017.
@@ -197,6 +294,14 @@
   type: calculation
   domain: orders
   description: Tax is computed per line item using the ship-to jurisdiction rate
+  app: commerce-web
+  capability: Checkout pricing
+  endpoint: POST /orders/quote
+  owner: checkout-modernization
+  priority: P0
+  criticality: critical
+  target_release: "2026-Q2"
+  jira_ticket: MOD-102
   preconditions:
     - order.ship_address is set
   logic: |
@@ -229,6 +334,22 @@
       notes: "Oregon — no sales tax"
   status: drift
   confidence: high
+  shadow_status: clean
+  shadow_clean_days: 9
+  last_verified_at: "2026-05-02T11:30:00Z"
+  verification_evidence:
+    - kind: shadow_run
+      ref: shadow/orders-quote/2026-05-02
+      status: accepted
+      at: "2026-05-02T11:30:00Z"
+    - kind: manual_review
+      ref: ADR-0023
+      status: accepted
+      at: "2026-05-02T11:30:00Z"
+  adr_refs:
+    - ADR-0023
+  test_refs:
+    - modern/src/domain/orders/pricing/tax.test.ts
   drift_reason: |
     Modern rounds per-line then sums; legacy sums per-line then rounds.
     Difference is at most $0.01 per order. Decision in ADR-0023:
