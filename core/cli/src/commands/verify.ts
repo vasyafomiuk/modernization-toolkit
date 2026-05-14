@@ -8,8 +8,8 @@
 //   3. Optional --promote flag to update status on passing rules
 //
 // The skeleton below shows the structure; replace TODOs with your stack-specific
-// implementations. The project's `tech.md` steering documents which test runner
-// to use.
+// implementations. Wire this command to the test runner used by the target
+// project.
 
 import kleur from "kleur";
 import { loadAllCatalogs, findRulesForSourcePaths, flattenCatalogs } from "../catalog.js";

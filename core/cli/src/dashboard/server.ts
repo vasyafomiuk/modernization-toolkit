@@ -10,6 +10,7 @@ import { openDb } from "./db.js";
 import {
   ApiError,
   apiAddProject,
+  apiAddRule,
   apiDeleteProject,
   apiGetCatalog,
   apiGetStatus,
@@ -78,6 +79,12 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/api\/projects\/(\d+)\/rules$/,
     handler: (db, m) => apiListRuleFiles(db, Number(m[1])),
+  },
+  {
+    method: "POST",
+    pattern: /^\/api\/projects\/(\d+)\/rules$/,
+    handler: (db, m, body) =>
+      apiAddRule(db, Number(m[1]), body as { domain?: string; rule?: unknown }),
   },
   {
     method: "GET",

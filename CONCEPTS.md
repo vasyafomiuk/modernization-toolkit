@@ -96,9 +96,8 @@ The pattern:
 
 The toolkit doesn't ship a harness runtime — that's deeply stack-specific
 — but it specifies the contract through the mask config format and the
-adapter convention. The `classify-shadow-diff` and `propose-mask-rules`
-skills are designed to work with this contract regardless of how it's
-hosted (Lambda, EKS sidecar, queue consumer).
+adapter convention. Diff classification and mask proposal can be automated
+with the AI provider you choose, as long as the final mask is human-reviewed.
 
 Two things to never do with masks:
 

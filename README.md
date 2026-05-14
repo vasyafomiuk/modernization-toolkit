@@ -1,7 +1,7 @@
 # Modernization Toolkit
 
-A toolkit for AI-assisted modernization of legacy systems — rule catalog, agent
-skills, differential-testing scaffolding, and a CLI to tie them together.
+A toolkit for AI-assisted modernization of legacy systems — rule catalog,
+differential-testing scaffolding, dashboard, and CLI to tie them together.
 
 Built to address a specific failure mode: AI agents that produce confident,
 plausible-looking code during modernization without the infrastructure to
@@ -9,22 +9,19 @@ verify that the new system actually matches the old one.
 
 ## What this is
 
-Three things, layered:
+Two things, layered:
 
 1. **A rule catalog format** — structured, machine-readable, human-reviewable
    YAML describing the business rules in both legacy and modern systems, so
    you can compare them across stacks instead of comparing implementations
    that aren't directly comparable.
 
-2. **A set of agent skills** — extraction, linking, verification, diff
-   classification, mask proposal, property-test generation. Each one is
-   opinionated about what counts as a rule and what counts as plumbing,
-   what's safe to mask and what isn't, where AI helps and where it doesn't.
-
-3. **A CLI** (`rules`) — wraps the catalog operations in something scriptable
+2. **A CLI + dashboard** (`rules`) — wraps the catalog operations in something scriptable
    for CI and day-to-day work. Lint, status rollup, gap diff, verification.
    It also ships a local dashboard for tracking readiness by app,
-   capability, endpoint, owner, priority, and shadow-test state.
+   capability, endpoint, owner, priority, and shadow-test state, plus a
+   searchable rule comparison view, gap radar, source map, and structured
+   add-rule flow.
 
 ## What this isn't
 
@@ -40,7 +37,7 @@ Three things, layered:
 ## Layout
 
 ```
-core/        Universal: schema, CLI, skill templates, steering, specs
+core/        Universal: schema, CLI, dashboard, and shadow harness contract
 examples/    Concrete instantiations for specific stacks
 docs/        Concepts, getting started, references
 ```
@@ -56,17 +53,17 @@ Three paths depending on where you are:
 
 **I'm starting a new modernization and want to use this as a template.**
 Read `docs/getting-started.md`, copy an example from `examples/` that's
-closest to your stack, adapt the steering and the catalog to your reality.
+closest to your stack, and adapt the catalog to your reality.
 
 **I want to understand the approach before committing.**
-Read `docs/concepts.md` for the conceptual model — rule catalog, status
+Read `CONCEPTS.md` for the conceptual model — rule catalog, status
 discipline, differential harness, cutover gates. Then look at
+`docs/ai-modernization-workflow.md` and
 `examples/dotnet-oracle-to-ts-aws/` to see it instantiated.
 
 **I'm contributing a new example for a different stack.**
-Read `docs/writing-an-example.md`. The short version: copy
-`examples/dotnet-oracle-to-ts-aws/`, replace the stack-specific bits, keep
-the structural shape.
+Copy `examples/dotnet-oracle-to-ts-aws/`, replace the stack-specific
+metadata and sample catalog entries, and keep the structural shape.
 
 ## The example that ships
 
@@ -74,8 +71,6 @@ the structural shape.
 .NET monolith with Oracle PL/SQL to TypeScript on AWS serverless with
 DynamoDB. It includes:
 
-- Kiro steering files (always-on, fileMatch, and manual variants)
-- Kiro hooks (file-save and agent-stop automation)
 - A populated rule catalog with six rules covering all status types
 - A shadow harness mask configuration
 
@@ -86,10 +81,7 @@ work as-is regardless of stack.
 
 This is a starting point, not a finished product. The CLI's `verify`,
 `extract`, and `link` commands are scaffolded with clear integration
-points for plugging in an AI provider. The skills are agent-platform
-agnostic in intent; the example targets Kiro because that's what it was
-built against, but Cursor, Continue, Claude Code, and Aider can all
-host the same skills with different hosting mechanics.
+points for plugging in an AI provider and your project's test runner.
 
 ## Why this exists
 

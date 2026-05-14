@@ -1,4 +1,4 @@
-// `rules extract` — invoke the extract-business-rules skill on a source file.
+// `rules extract` — extract business rules from a source file.
 //
 // This command is a thin wrapper that:
 //   1. Parses the target file (using the appropriate parser per language)
@@ -58,10 +58,7 @@ export async function runExtract(options: ExtractOptions): Promise<number> {
   //
   //   const sourceText = await fs.readFile(sourcePath, "utf8");
   //   const callees = await inlineCallees(sourcePath, language); // AST-based
-  //   const systemPrompt = await fs.readFile(
-  //     ".kiro/skills/extract-business-rules/references/extraction-system-prompt.md",
-  //     "utf8"
-  //   );
+  //   const systemPrompt = buildExtractionSystemPrompt({ language, domain });
   //   const userPrompt = buildUserPrompt({ sourceText, callees, language, domain });
   //   const yamlOutput = await callAnthropicAPI({
   //     model: options.model ?? "claude-opus-4-7",
@@ -75,9 +72,6 @@ export async function runExtract(options: ExtractOptions): Promise<number> {
   console.log(kleur.yellow("\n⚠ Extract command is a scaffold."));
   console.log(kleur.dim("  Wire in your AI provider integration here."));
   console.log(kleur.dim(`  Target output: ${outPath}`));
-  console.log("");
-  console.log(kleur.dim("  See .kiro/skills/extract-business-rules/SKILL.md for full guidance,"));
-  console.log(kleur.dim("  or invoke the skill directly from Kiro for interactive extraction."));
 
   return 0;
 }

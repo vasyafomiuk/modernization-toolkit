@@ -42,7 +42,7 @@
     button:hover { border-color: var(--accent); }
     button.primary { background: var(--accent); color: #0b1220; border-color: var(--accent); font-weight: 600; }
     button.danger { color: var(--red); }
-    input, textarea {
+    input, textarea, select {
       background: var(--bg);
       border: 1px solid var(--border);
       color: var(--text);
@@ -85,7 +85,7 @@
     .project-item:hover { background: var(--panel-2); }
     .project-item.active { background: var(--panel-2); border-color: var(--accent); }
     .project-item .name { font-weight: 600; }
-    .project-item .path { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+    .project-item .path { font-size: 12px; color: var(--muted); font-family: var(--mono); overflow-wrap: anywhere; }
 
     /* Main */
     main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -263,9 +263,43 @@
     .badge-ok { color: var(--green); }
     .badge-fail { color: var(--red); }
 
+    /* Forms */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .form-grid .wide { grid-column: 1 / -1; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+    }
+    .modal.wide {
+      width: min(880px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+    }
+    .source-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr 90px 90px;
+      gap: 8px;
+      align-items: end;
+    }
+    .section-label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 4px;
+    }
+
     /* Compare view */
-    .compare-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; height: 100%; }
+    .compare-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; height: 100%; }
     .rule-list-wrap { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+    .rule-search { display: flex; gap: 8px; align-items: center; }
     .rule-filter { display: flex; gap: 6px; flex-wrap: wrap; }
     .rule-filter button { font-size: 12px; padding: 3px 8px; }
     .rule-filter button.on { border-color: var(--accent); color: var(--accent); }
@@ -286,7 +320,7 @@
     .rule-item .rid { font-family: var(--mono); font-size: 12px; flex-shrink: 0; }
     .rule-item .rdesc { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    .compare-pane { overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+    .compare-pane { overflow-y: auto; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
     .rule-head { display: flex; flex-direction: column; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
     .rule-head .rid-big { font-family: var(--mono); font-size: 18px; color: var(--accent); }
     .rule-head .desc { font-size: 15px; }
@@ -307,13 +341,14 @@
     }
     .drift-callout .label { font-size: 11px; color: var(--magenta); text-transform: uppercase; letter-spacing: 0.08em; }
 
-    .sxs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sxs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .sxs-col {
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 14px;
       display: flex; flex-direction: column; gap: 10px;
+      min-width: 0;
     }
     .sxs-col h4 {
       margin: 0;
@@ -339,7 +374,7 @@
       overflow-x: auto;
     }
     .source-list { display: flex; flex-direction: column; gap: 4px; }
-    .source-row { font-family: var(--mono); font-size: 12px; }
+    .source-row { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
     .source-row .sym { color: var(--accent); }
     .source-row .lines { color: var(--muted); }
 
@@ -420,6 +455,80 @@
     .map-edge:hover { stroke-width: 3; opacity: 1 !important; }
     .map-edge.dimmed { opacity: 0.08; }
     .map-empty { padding: 60px; text-align: center; color: var(--muted); }
+
+    /* Gap radar */
+    .radar-layout { display: flex; flex-direction: column; gap: 12px; }
+    .radar-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .radar-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+    .radar-table tbody tr { cursor: pointer; }
+    .radar-table tbody tr:hover { background: var(--panel); }
+    .reason-stack { display: flex; flex-wrap: wrap; gap: 4px; }
+    .reason-chip {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 11px;
+      font-family: var(--mono);
+    }
+    .reason-chip.pill-gap { background: #3a1416; color: var(--red); }
+    .reason-chip.pill-extracted { background: #2a313f; color: var(--muted); }
+    .reason-chip.pill-implemented_unverified { background: #3a2f10; color: var(--yellow); }
+    .reason-chip.pill-drift { background: #2c1539; color: var(--magenta); }
+
+    @media (max-width: 800px) {
+      body { flex-direction: column; }
+      aside {
+        width: 100%;
+        max-height: 240px;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      main { min-height: 0; }
+      header.topbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+      }
+      #project-actions { flex-wrap: wrap; }
+      .tabs {
+        overflow-x: auto;
+        padding: 0 12px;
+      }
+      .tab { white-space: nowrap; }
+      .panel { padding: 12px; }
+      .readiness-summary,
+      .radar-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .compare-layout,
+      .editor-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      .rule-list { max-height: 260px; }
+      .sxs,
+      .form-grid,
+      .source-grid,
+      .example-card {
+        grid-template-columns: 1fr;
+      }
+      .readiness-table,
+      .radar-table {
+        min-width: 880px;
+      }
+      .modal {
+        width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+      }
+      .modal.wide { width: calc(100vw - 16px); }
+      .map-svg-wrap { min-height: 360px; }
+    }
   </style>
 </head>
 <body>
@@ -436,6 +545,7 @@
   <header class="topbar">
     <h2 id="project-title">No project selected</h2>
     <div class="row" id="project-actions" style="display:none">
+      <button class="primary" id="action-add-rule">Add rule</button>
       <button id="action-lint">Lint</button>
       <button id="action-diff">Diff</button>
       <button id="action-verify">Verify</button>
@@ -446,6 +556,7 @@
 
   <div class="tabs" id="tabs" style="display:none">
     <div class="tab active" data-tab="readiness">Readiness</div>
+    <div class="tab" data-tab="gaps">Gap radar</div>
     <div class="tab" data-tab="status">Status</div>
     <div class="tab" data-tab="map">Map</div>
     <div class="tab" data-tab="compare">Compare</div>
@@ -472,6 +583,9 @@ const state = {
   catalogCache: {},
   selectedRuleId: null,
   compareFilter: "all", // 'all' | <RuleStatus>
+  compareQuery: "",
+  gapFilter: "all",
+  gapQuery: "",
   mapFilter: "all",     // 'all' | <RuleStatus>
   mapPinFile: null,     // {side: 'legacy'|'modern', path} or null
 };
@@ -579,7 +693,202 @@ $("#add-project-btn").onclick = () => {
   pathInput.focus();
 };
 
+function formField(label, control, wide = false) {
+  return el("div", { class: "field" + (wide ? " wide" : "") }, [
+    el("label", {}, label),
+    control,
+  ]);
+}
+
+function makeInput(label, attrs = {}, wide = false) {
+  return { input: el("input", attrs), wrap(control) { return formField(label, control || this.input, wide); } };
+}
+
+function makeTextarea(label, attrs = {}, wide = false) {
+  return { input: el("textarea", attrs), wrap(control) { return formField(label, control || this.input, wide); } };
+}
+
+function makeSelect(label, options, selected, wide = false) {
+  const select = el("select");
+  for (const opt of options) {
+    select.appendChild(el("option", { value: opt }, opt.replace(/_/g, " ")));
+  }
+  select.value = selected;
+  return { input: select, wrap(control) { return formField(label, control || this.input, wide); } };
+}
+
+function sourceFields(side) {
+  const pathInput = el("input", { placeholder: side === "legacy" ? "legacy/db/PKG_ORDER_RULES.pkb" : "modern/src/domain/orders/rule.ts" });
+  const symbolInput = el("input", { placeholder: side === "legacy" ? "calc_rule" : "applyRule" });
+  const startInput = el("input", { type: "number", min: "1", placeholder: "1" });
+  const endInput = el("input", { type: "number", min: "1", placeholder: "1" });
+  return {
+    node: el("div", { class: "source-grid wide" }, [
+      formField(`${side} path`, pathInput),
+      formField("symbol", symbolInput),
+      formField("start", startInput),
+      formField("end", endInput),
+    ]),
+    read() {
+      const srcPath = pathInput.value.trim();
+      const symbol = symbolInput.value.trim();
+      if (!srcPath && !symbol) return [];
+      if (!srcPath || !symbol) throw new Error(`${side} source needs path and symbol`);
+      const start = Number(startInput.value || 1);
+      const end = Number(endInput.value || start);
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start) {
+        throw new Error(`${side} source lines must be positive and ordered`);
+      }
+      return [{ path: srcPath, symbol, lines: [start, end] }];
+    },
+  };
+}
+
+function splitLines(value) {
+  return value
+    .split(/\r?\n|,/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function selectedRuleFromCache() {
+  const catalogs = state.catalogCache[state.selectedId] || [];
+  for (const c of catalogs) {
+    const found = c.rules.find((r) => r.id === state.selectedRuleId);
+    if (found) return found;
+  }
+  return null;
+}
+
+function invalidateProjectCaches(projectId) {
+  delete state.statusCache[projectId];
+  delete state.catalogCache[projectId];
+  delete state.rulesCache[projectId];
+  delete state.runsCache[projectId];
+}
+
+function openAddRuleModal() {
+  if (!state.selectedId) return;
+
+  const overlay = el("div", { class: "modal-overlay" });
+  const close = () => overlay.remove();
+  const selectedRule = selectedRuleFromCache();
+
+  const domain = makeInput("Domain", { placeholder: "orders" });
+  domain.input.value = selectedRule?.domain || selectedRule?._catalogDomain || "";
+  const id = makeInput("Rule id", { placeholder: "ORD-CALC-019" });
+  const type = makeSelect("Type", ["validation", "calculation", "authorization", "state_transition", "side_effect"], "validation");
+  const status = makeSelect("Status", STATUSES, "extracted");
+  const confidence = makeSelect("Confidence", ["high", "medium", "low"], "medium");
+  const description = makeInput("Description", { placeholder: "One-sentence business rule" }, true);
+  const app = makeInput("App", { placeholder: "commerce-web" });
+  const capability = makeInput("Capability", { placeholder: "Checkout pricing" });
+  const endpoint = makeInput("Endpoint / job / event", { placeholder: "POST /orders/quote" });
+  const owner = makeInput("Owner", { placeholder: "checkout-modernization" });
+  const priority = makeSelect("Priority", ["", "P0", "P1", "P2", "P3"], "");
+  const criticality = makeSelect("Criticality", ["", "critical", "high", "medium", "low"], "");
+  const trigger = makeInput("Trigger", { placeholder: "order.total_computed" });
+  const preconditions = makeTextarea("Preconditions", { rows: "3", placeholder: "customer.tier == GOLD\norder.subtotal >= 100" }, true);
+  const logic = makeTextarea("Normalized logic", { rows: "5", placeholder: "discount = min(order.subtotal * 0.15, 50)" }, true);
+  const effect = makeInput("Effect", { placeholder: "order.discount_applied = discount" }, true);
+  const notes = makeTextarea("Notes / drift reason", { rows: "3", placeholder: "Add review notes, low-confidence rationale, or drift/deprecation reason." }, true);
+  const tags = makeInput("Tags", { placeholder: "pricing, tax, discount" }, true);
+  const legacy = sourceFields("legacy");
+  const modern = sourceFields("modern");
+  const examples = makeTextarea("Examples JSON", { rows: "8", spellcheck: "false" }, true);
+  examples.input.value = JSON.stringify([
+    { input: { example: true }, expect: { accepted: true }, kind: "positive" },
+    { input: { example: false }, expect: { accepted: false }, kind: "negative" },
+  ], null, 2);
+
+  const error = el("div", { class: "muted" });
+
+  const submit = async () => {
+    error.textContent = "";
+    try {
+      const parsedExamples = JSON.parse(examples.input.value);
+      const legacySources = legacy.read();
+      const modernSources = modern.read();
+      const rule = {
+        id: id.input.value,
+        type: type.input.value,
+        status: status.input.value,
+        confidence: confidence.input.value,
+        description: description.input.value,
+        app: app.input.value,
+        capability: capability.input.value,
+        endpoint: endpoint.input.value,
+        owner: owner.input.value,
+        priority: priority.input.value,
+        criticality: criticality.input.value,
+        trigger: trigger.input.value,
+        preconditions: splitLines(preconditions.input.value),
+        logic: logic.input.value,
+        effect: effect.input.value,
+        notes: notes.input.value,
+        drift_reason: status.input.value === "drift" ? notes.input.value : "",
+        deprecated_reason: status.input.value === "deprecated" ? notes.input.value : "",
+        tags: splitLines(tags.input.value),
+        legacy_sources: legacySources,
+        modern_sources: modernSources,
+        examples: parsedExamples,
+      };
+
+      const { rule: saved } = await api(`/api/projects/${state.selectedId}/rules`, {
+        method: "POST",
+        body: { domain: domain.input.value, rule },
+      });
+      invalidateProjectCaches(state.selectedId);
+      state.selectedRuleId = saved.id;
+      close();
+      setTab("compare");
+    } catch (err) {
+      error.textContent = err.message;
+    }
+  };
+
+  const modal = el("div", { class: "modal wide" }, [
+    el("h3", {}, "Add business rule"),
+    el("div", { class: "form-grid" }, [
+      domain.wrap(),
+      id.wrap(),
+      type.wrap(),
+      status.wrap(),
+      confidence.wrap(),
+      priority.wrap(),
+      criticality.wrap(),
+      owner.wrap(),
+      app.wrap(),
+      capability.wrap(),
+      endpoint.wrap(),
+      trigger.wrap(),
+      description.wrap(),
+      preconditions.wrap(),
+      logic.wrap(),
+      effect.wrap(),
+      el("div", { class: "section-label wide" }, "Legacy source"),
+      legacy.node,
+      el("div", { class: "section-label wide" }, "Modern source"),
+      modern.node,
+      examples.wrap(),
+      tags.wrap(),
+      notes.wrap(),
+    ]),
+    error,
+    el("div", { class: "row", style: "justify-content: flex-end" }, [
+      el("button", { onclick: close }, "Cancel"),
+      el("button", { class: "primary", onclick: submit }, "Add rule"),
+    ]),
+  ]);
+
+  overlay.onclick = (e) => { if (e.target === overlay) close(); };
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  domain.input.focus();
+}
+
 // --- Action buttons ---
+$("#action-add-rule").onclick = () => openAddRuleModal();
 $("#action-lint").onclick = () => runCmd("lint");
 $("#action-diff").onclick = () => runCmd("diff");
 $("#action-verify").onclick = () => runCmd("verify");
@@ -630,6 +939,7 @@ function setTab(tab) {
   state.activeTab = tab;
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tab));
   if (tab === "readiness") renderReadiness();
+  else if (tab === "gaps") renderGapRadar();
   else if (tab === "status") renderStatus();
   else if (tab === "map") renderMap();
   else if (tab === "compare") renderCompare();
@@ -957,6 +1267,235 @@ function shadowLabel(group) {
       .map((r) => Number.isFinite(r.shadow_clean_days) ? r.shadow_clean_days : 0),
   );
   return el("span", { class: "mono" }, days > 0 ? `${group.shadow} (${days}d)` : group.shadow);
+}
+
+// --- Gap radar ---
+function flattenCatalogRules(catalogs) {
+  const all = [];
+  for (const c of catalogs) {
+    for (const r of c.rules) all.push({ ...r, _file: c.file, _catalogDomain: c.domain });
+  }
+  return all;
+}
+
+function hasSources(rule, side) {
+  return !!(rule.sources && Array.isArray(rule.sources[side]) && rule.sources[side].length);
+}
+
+function latestEvidence(rule) {
+  const ev = rule.verification_evidence || [];
+  if (!ev.length) return "-";
+  const sorted = [...ev].sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
+  const first = sorted[0];
+  return `${first.kind}: ${first.status}`;
+}
+
+function searchableRuleText(rule) {
+  const sources = [
+    ...((rule.sources && rule.sources.legacy) || []),
+    ...((rule.sources && rule.sources.modern) || []),
+  ].flatMap((s) => [s.path, s.symbol]);
+  return [
+    rule.id,
+    rule.description,
+    rule.type,
+    rule.domain,
+    rule.status,
+    rule.confidence,
+    rule.app,
+    rule.capability,
+    rule.endpoint,
+    rule.owner,
+    rule.priority,
+    rule.criticality,
+    rule.logic,
+    ...(rule.tags || []),
+    ...sources,
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function radarReasons(rule) {
+  if (rule.status === "deprecated") return [];
+  const reasons = [];
+  if (rule.status === "gap") reasons.push({ key: "gap", label: "gap", tone: "pill-gap" });
+  if (rule.status === "extracted") reasons.push({ key: "extracted", label: "review", tone: "pill-extracted" });
+  if (rule.status === "implemented_unverified") reasons.push({ key: "unverified", label: "verify", tone: "pill-implemented_unverified" });
+  if (rule.status === "drift") reasons.push({ key: "drift", label: "drift", tone: "pill-drift" });
+  if (!hasSources(rule, "modern") && rule.status !== "net_new" && rule.status !== "deprecated") {
+    reasons.push({ key: "missing_modern", label: "no modern source", tone: "pill-gap" });
+  }
+  if (!hasSources(rule, "legacy") && rule.status !== "net_new") {
+    reasons.push({ key: "missing_legacy", label: "no legacy source", tone: "pill-extracted" });
+  }
+  if (!rule.endpoint) reasons.push({ key: "unmapped", label: "unmapped endpoint", tone: "pill-extracted" });
+  if (rule.confidence === "low") reasons.push({ key: "low_confidence", label: "low confidence", tone: "pill-extracted" });
+  if (!rule.test_refs || rule.test_refs.length === 0) {
+    reasons.push({ key: "no_tests", label: "no tests linked", tone: "pill-implemented_unverified" });
+  }
+  if (rule.shadow_status === "diffs" || rule.shadow_status === "blocked") {
+    reasons.push({ key: "shadow", label: `shadow ${rule.shadow_status}`, tone: "pill-gap" });
+  }
+  if (rule.shadow_status === "not_configured" && rule.criticality === "critical") {
+    reasons.push({ key: "shadow", label: "shadow missing", tone: "pill-implemented_unverified" });
+  }
+  return reasons;
+}
+
+function nextRuleAction(rule, reasons) {
+  const keys = new Set(reasons.map((r) => r.key));
+  if (keys.has("gap") || keys.has("missing_modern")) return "Map or implement the modern service-layer counterpart.";
+  if (keys.has("extracted")) return "Review extraction, normalize pseudocode, then link sources.";
+  if (keys.has("unverified")) return "Run examples, property tests, or shadow traffic before promotion.";
+  if (keys.has("shadow")) return "Classify shadow diffs and update masks only for safe fields.";
+  if (keys.has("unmapped")) return "Add endpoint, event, job, or workflow metadata.";
+  if (keys.has("no_tests")) return "Attach unit/property/shadow evidence to this rule.";
+  if (keys.has("drift")) return "Confirm drift is intentional and backed by an ADR.";
+  return "Ready for normal review.";
+}
+
+function radarSeverity(rule, reasons) {
+  if (rule.status === "gap" || reasons.some((r) => r.key === "shadow")) return 0;
+  if (rule.criticality === "critical" || rule.priority === "P0") return 1;
+  if (rule.status === "implemented_unverified" || rule.status === "extracted") return 2;
+  return 3;
+}
+
+async function renderGapRadar() {
+  const panel = $("#panel");
+  panel.innerHTML = "";
+  panel.appendChild(el("div", { class: "muted" }, "Loading gap radar..."));
+
+  let catalogs;
+  try {
+    catalogs = await loadCatalogIfNeeded();
+  } catch (err) {
+    panel.innerHTML = "";
+    panel.appendChild(el("div", { class: "muted" }, `Error: ${err.message}`));
+    return;
+  }
+
+  const allRules = flattenCatalogRules(catalogs);
+  const radar = allRules
+    .map((rule) => {
+      const reasons = radarReasons(rule);
+      return { rule, reasons, nextAction: nextRuleAction(rule, reasons), severity: radarSeverity(rule, reasons) };
+    })
+    .filter((item) => item.reasons.length > 0);
+
+  const q = state.gapQuery.trim().toLowerCase();
+  const filtered = radar
+    .filter((item) => state.gapFilter === "all" || item.reasons.some((r) => r.key === state.gapFilter) || item.rule.status === state.gapFilter)
+    .filter((item) => !q || searchableRuleText(item.rule).includes(q))
+    .sort((a, b) => {
+      const severityDelta = a.severity - b.severity;
+      if (severityDelta !== 0) return severityDelta;
+      const priorityOrder = { P0: 0, P1: 1, P2: 2, P3: 3 };
+      const priorityDelta = (priorityOrder[a.rule.priority] ?? 9) - (priorityOrder[b.rule.priority] ?? 9);
+      if (priorityDelta !== 0) return priorityDelta;
+      return a.rule.id.localeCompare(b.rule.id);
+    });
+
+  panel.innerHTML = "";
+  const layout = el("div", { class: "radar-layout" });
+
+  const counts = {
+    total: radar.length,
+    gaps: radar.filter((x) => x.reasons.some((r) => r.key === "gap" || r.key === "missing_modern")).length,
+    verify: radar.filter((x) => x.reasons.some((r) => r.key === "unverified" || r.key === "no_tests")).length,
+    shadow: radar.filter((x) => x.reasons.some((r) => r.key === "shadow")).length,
+    unmapped: radar.filter((x) => x.reasons.some((r) => r.key === "unmapped")).length,
+  };
+  layout.appendChild(el("div", { class: "radar-summary" }, [
+    readinessCard("Open items", String(counts.total)),
+    readinessCard("Legacy gaps", String(counts.gaps)),
+    readinessCard("Needs tests", String(counts.verify)),
+    readinessCard("Shadow issues", String(counts.shadow)),
+    readinessCard("Unmapped", String(counts.unmapped)),
+  ]));
+
+  const toolbar = el("div", { class: "radar-toolbar" });
+  const search = el("input", {
+    id: "gap-search",
+    placeholder: "Search rules, owners, endpoints, SQL packages, TS services...",
+  });
+  search.value = state.gapQuery;
+  search.oninput = () => {
+    const cursor = search.selectionStart || search.value.length;
+    state.gapQuery = search.value;
+    renderGapRadar().then(() => {
+      const next = $("#gap-search");
+      if (next) {
+        next.focus();
+        next.setSelectionRange(cursor, cursor);
+      }
+    });
+  };
+  toolbar.appendChild(search);
+
+  const filter = el("div", { class: "rule-filter" });
+  const FILTERS = [
+    ["all", "all"],
+    ["gap", "gaps"],
+    ["extracted", "review"],
+    ["unverified", "verify"],
+    ["shadow", "shadow"],
+    ["unmapped", "unmapped"],
+    ["no_tests", "no tests"],
+    ["low_confidence", "low confidence"],
+  ];
+  for (const [key, label] of FILTERS) {
+    filter.appendChild(el("button", {
+      class: state.gapFilter === key ? "on" : "",
+      onclick: () => { state.gapFilter = key; renderGapRadar(); },
+    }, label));
+  }
+  toolbar.appendChild(filter);
+  layout.appendChild(toolbar);
+
+  if (filtered.length === 0) {
+    layout.appendChild(el("div", { class: "empty" }, "No matching gap signals."));
+    panel.appendChild(layout);
+    return;
+  }
+
+  const table = el("table", { class: "radar-table" });
+  table.appendChild(el("thead", {}, [
+    el("tr", {}, [
+      el("th", {}, "Rule"),
+      el("th", {}, "Owner"),
+      el("th", {}, "Priority"),
+      el("th", {}, "Signals"),
+      el("th", {}, "Evidence"),
+      el("th", {}, "Next action"),
+    ]),
+  ]));
+  const tbody = el("tbody");
+  for (const item of filtered) {
+    const r = item.rule;
+    tbody.appendChild(el("tr", {
+      onclick: () => {
+        state.selectedRuleId = r.id;
+        state.compareFilter = "all";
+        setTab("compare");
+      },
+    }, [
+      el("td", {}, [
+        el("div", { class: "mono" }, r.id),
+        el("div", {}, r.description),
+        el("div", { class: "muted" }, `${r.app || "Unassigned app"} / ${r.capability || r.domain} / ${r.endpoint || "Unmapped endpoint"}`),
+      ]),
+      el("td", {}, r.owner || "-"),
+      el("td", {}, el("span", { class: "priority-pill" }, r.priority || "-")),
+      el("td", {}, el("div", { class: "reason-stack" }, item.reasons.map((reason) =>
+        el("span", { class: `reason-chip ${reason.tone}` }, reason.label)
+      ))),
+      el("td", {}, latestEvidence(r)),
+      el("td", { class: "next-action" }, item.nextAction),
+    ]));
+  }
+  table.appendChild(tbody);
+  layout.appendChild(table);
+  panel.appendChild(layout);
 }
 
 // --- Rules editor ---
@@ -1354,23 +1893,49 @@ async function renderCompare() {
 
   panel.innerHTML = "";
 
-  // Flatten all rules with their domain.
-  const allRules = [];
-  for (const c of cat) for (const r of c.rules) allRules.push(r);
+  const allRules = flattenCatalogRules(cat);
   if (allRules.length === 0) {
     panel.appendChild(el("div", { class: "muted" }, "No rules in this catalog yet."));
     return;
   }
 
+  const query = state.compareQuery.trim().toLowerCase();
+  const ruleMatches = (r) =>
+    (state.compareFilter === "all" || r.status === state.compareFilter) &&
+    (!query || searchableRuleText(r).includes(query));
+  const visibleRules = allRules.filter(ruleMatches);
+
   // Default-select the first rule (or the previously selected one if still present).
   if (!state.selectedRuleId || !allRules.find((r) => r.id === state.selectedRuleId)) {
-    state.selectedRuleId = allRules[0].id;
+    state.selectedRuleId = (visibleRules[0] || allRules[0]).id;
+  } else if (visibleRules.length && !visibleRules.find((r) => r.id === state.selectedRuleId)) {
+    state.selectedRuleId = visibleRules[0].id;
   }
 
   const layout = el("div", { class: "compare-layout" });
 
   // Left: filterable rule list, grouped by domain.
   const leftWrap = el("div", { class: "rule-list-wrap" });
+  const searchRow = el("div", { class: "rule-search" });
+  const search = el("input", {
+    id: "compare-search",
+    placeholder: "Find rule, owner, endpoint, source path, symbol...",
+  });
+  search.value = state.compareQuery;
+  search.oninput = () => {
+    const cursor = search.selectionStart || search.value.length;
+    state.compareQuery = search.value;
+    renderCompare().then(() => {
+      const next = $("#compare-search");
+      if (next) {
+        next.focus();
+        next.setSelectionRange(cursor, cursor);
+      }
+    });
+  };
+  searchRow.appendChild(search);
+  leftWrap.appendChild(searchRow);
+
   const filterBar = el("div", { class: "rule-filter" });
   const FILTERS = ["all", ...STATUSES];
   for (const f of FILTERS) {
@@ -1384,7 +1949,7 @@ async function renderCompare() {
 
   const ruleList = el("div", { class: "rule-list" });
   for (const c of cat) {
-    const visible = c.rules.filter((r) => state.compareFilter === "all" || r.status === state.compareFilter);
+    const visible = c.rules.filter(ruleMatches);
     if (visible.length === 0) continue;
     ruleList.appendChild(el("div", { class: "domain-header" }, c.domain));
     for (const r of visible) {

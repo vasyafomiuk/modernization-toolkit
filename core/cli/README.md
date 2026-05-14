@@ -31,8 +31,14 @@ rules dashboard --db ./local.db       # alternate DB location
 
 **Features**
 - Register projects by absolute path (typically created via `rules init`)
+- Add business rules through a structured form that writes to
+  `rules/<domain>.yaml`
 - Readiness rollup by app, capability, and endpoint, including owners,
   priority, criticality, blockers, and shadow status
+- Gap radar for missing modern implementations, unreviewed extractions,
+  unverified rules, missing tests, unmapped endpoints, and shadow issues
+- Searchable rule comparison across IDs, descriptions, owners, endpoints,
+  source paths, symbols, tags, and normalized logic
 - Per-project status rollup — calls `rules status --format json` and renders
   counts by domain and rule status, with a verified/gaps/drift/unreviewed
   summary strip
@@ -51,6 +57,7 @@ rules dashboard --db ./local.db       # alternate DB location
 | POST   | `/projects/:id/run`                   | `{command}` — lint/diff/verify|
 | GET    | `/projects/:id/runs`                  | Recent runs (last 50)         |
 | GET    | `/projects/:id/rules`                 | YAML files under `rules/`     |
+| POST   | `/projects/:id/rules`                 | Append structured rule        |
 | GET    | `/projects/:id/rules/:file`           | File contents                 |
 | PUT    | `/projects/:id/rules/:file`           | Save `{content}`              |
 
@@ -60,7 +67,7 @@ Path traversal is blocked: rule-file reads/writes must resolve under
 ### `rules init <target>`
 
 Scaffold a target repo with the toolkit: copies an example as a base, overlays
-universal pieces from `core/`, and (by default) installs the CLI under
+the catalog schema from `core/`, and (by default) installs the CLI under
 `<target>/tools/rules-cli`.
 
 ```bash
@@ -70,9 +77,8 @@ rules init ~/my-modernization -e dotnet-oracle-to-ts-aws
 rules init ~/my-modernization --force         # scaffold into a non-empty dir
 ```
 
-After it runs, the next steps are printed: edit the steering files, optionally
-`npm link` the per-project CLI, and run `rules lint` to confirm the catalog
-parses.
+After it runs, the next steps are printed: edit `rules/*.yaml`, optionally
+`npm link` the per-project CLI, and run `rules lint` to confirm the catalog parses.
 
 ### `rules lint [target]`
 
@@ -143,14 +149,14 @@ guidance.
 
 ### `rules extract <source>`
 
-Extract business rules from a source file via the AI agent.
+Extract business rules from a source file via your AI provider integration.
 
 ```bash
 rules extract legacy/src/Orders/OrderService.cs --system legacy
 rules extract modern/src/domain/orders/discount.ts --system modern
 ```
 
-**SCAFFOLD**: this is a thin wrapper around the extraction skill. Wire in
+**SCAFFOLD**: this is a thin wrapper around an extraction workflow. Wire in
 your AI provider in `src/commands/extract.ts`. Output goes to
 `rules-raw/<system>/<domain>/<source-path>.yaml`.
 
@@ -165,8 +171,7 @@ rules link --threshold 0.85      # lower auto-match threshold
 ```
 
 **SCAFFOLD**: the actual semantic linking should call your AI provider.
-The stub provided does ID-only matching, which is rarely correct. See
-`.kiro/skills/link-rule-catalogs/SKILL.md` for guidance on the AI call.
+The stub provided does ID-only matching, which is rarely correct.
 
 Output: `rules-raw/_link-proposals.yaml`. Human review required before
 promoting proposals into `rules/<domain>.yaml`.

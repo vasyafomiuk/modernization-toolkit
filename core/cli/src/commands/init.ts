@@ -1,6 +1,6 @@
 // `rules init` — guided scaffold of a target repo from the toolkit.
 //
-// Copies the chosen example as a base, overlays universal pieces from core/,
+// Copies the chosen example as a base, overlays the catalog schema from core/,
 // and (optionally) installs the CLI under tools/rules-cli. Single positional
 // argument: the target directory.
 
@@ -78,21 +78,6 @@ async function buildCopyPlan(
   }
   const steps: CopyPlanEntry[] = [
     { from: exampleAbs, to: "{target}", label: `example: ${example}` },
-    {
-      from: path.join(TOOLKIT_ROOT, "core/skills"),
-      to: "{target}/.kiro/skills",
-      label: "core/skills -> .kiro/skills",
-    },
-    {
-      from: path.join(TOOLKIT_ROOT, "core/steering"),
-      to: "{target}/.kiro/steering",
-      label: "core/steering -> .kiro/steering",
-    },
-    {
-      from: path.join(TOOLKIT_ROOT, "core/specs/_template"),
-      to: "{target}/.kiro/specs/_template",
-      label: "core/specs/_template -> .kiro/specs/_template",
-    },
     {
       from: path.join(TOOLKIT_ROOT, "core/schema"),
       to: "{target}/rules/.schema",
@@ -183,7 +168,7 @@ export async function runInit(opts: InitOptions): Promise<number> {
   console.log(kleur.green().bold("\nDone."));
   console.log("Next steps:");
   console.log(`  1. cd ${target}`);
-  console.log(`  2. Edit .kiro/steering/{product,tech,structure}.md for your stack`);
+  console.log(`  2. Edit rules/*.yaml for your domains, owners, and source paths`);
   if (opts.installCli) {
     console.log(`  3. cd tools/rules-cli && npm link    # expose \`rules\` globally`);
     console.log(`  4. rules lint                         # confirm catalog parses`);

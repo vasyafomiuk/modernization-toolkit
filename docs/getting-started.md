@@ -1,118 +1,93 @@
 # Getting Started
 
-A walkthrough for adopting the toolkit. Three paths depending on where
-you're starting.
+A practical walkthrough for adopting the toolkit with only portable catalog,
+dashboard, CLI, and shadow-harness artifacts.
 
 ## Path A: I have a stack close to an existing example
 
-Easiest case. Find the closest example in `examples/`, fork it,
-adapt the steering files to your specifics, and you're running.
+Copy the closest example and install the CLI:
 
 ```bash
 # From a fresh clone of this repo
 cp -R examples/<closest-match>/. YOUR_REPO/
 
-# Pull universal pieces from core/
-cp -R core/skills/* YOUR_REPO/.kiro/skills/
-cp -R core/steering/* YOUR_REPO/.kiro/steering/
-cp -R core/specs/_template YOUR_REPO/.kiro/specs/_template
+# Pull universal schema and CLI pieces from core/
 cp -R core/schema YOUR_REPO/rules/.schema
+mkdir -p YOUR_REPO/tools
+cp -R core/cli YOUR_REPO/tools/rules-cli
 
-# Install the CLI
-cd YOUR_REPO/tools
-cp -R ../../core/cli ./rules-cli
-cd rules-cli
-npm install && npm run build && npm link
+cd YOUR_REPO/tools/rules-cli
+npm install
+npm run build
+npm link
 
-# Verify
-rules lint --help
+rules lint
+rules dashboard
 ```
 
-Then:
-1. Edit `.kiro/steering/product.md` for your product
-2. Edit `.kiro/steering/tech.md` for your actual stack details
-3. Edit `.kiro/steering/structure.md` for your repo layout
-4. Run `rules lint examples/<closest-match>/rules/` to confirm the
-   example catalog parses
+Then adapt:
+
+1. Edit `rules/<domain>.yaml` for your domains, source paths, owners, and
+   cutover metadata.
+2. Edit or add `shadow/masks/*.yaml` for endpoints you plan to shadow.
+3. Wire `rules extract`, `rules link`, and `rules verify` to your AI provider
+   and test runner when you are ready to automate more of the loop.
 
 ## Path B: I have a novel stack
 
-Slightly more work — you'll write your own stack-specific steering. The
-universal pieces still apply.
+Start with the universal pieces only:
 
-1. Start from `core/` only:
-   ```bash
-   cp -R core/skills YOUR_REPO/.kiro/skills
-   cp -R core/steering YOUR_REPO/.kiro/steering
-   cp -R core/specs/_template YOUR_REPO/.kiro/specs/_template
-   cp -R core/schema YOUR_REPO/rules/.schema
-   cp -R core/cli YOUR_REPO/tools/rules-cli
-   ```
+```bash
+mkdir -p YOUR_REPO/rules YOUR_REPO/tools
+cp -R core/schema YOUR_REPO/rules/.schema
+cp -R core/cli YOUR_REPO/tools/rules-cli
+```
 
-2. Write your own:
-   - `.kiro/steering/product.md` — what you're modernizing
-   - `.kiro/steering/tech.md` — legacy + modern stacks
-   - `.kiro/steering/structure.md` — your repo layout
-   - `.kiro/steering/legacy-<lang>.md` — fileMatch on legacy code paths
-   - `.kiro/steering/modern-<lang>.md` — fileMatch on modern code paths
+Create one catalog file per domain:
 
-   The shipped example provides a model for each of these.
+```bash
+YOUR_REPO/rules/orders.yaml
+YOUR_REPO/rules/billing.yaml
+YOUR_REPO/rules/policies.yaml
+```
 
-3. Add stack-specific golden examples to
-   `.kiro/skills/extract-business-rules/references/examples.md`.
+Use the example catalog as the shape reference:
 
-4. If you're not using Kiro, see `docs/agent-platforms.md` for adapting
-   the format to Cursor, Continue, Claude Code, etc.
+```bash
+examples/dotnet-oracle-to-ts-aws/rules/orders.yaml
+```
 
 ## Path C: I want to understand the concepts first
 
 Read in order:
 
-1. [`CONCEPTS.md`](../CONCEPTS.md) — the conceptual model. Catalog,
-   status discipline, harness, gates.
-2. [`docs/rule-catalog.md`](rule-catalog.md) — the catalog format
-   reference.
-3. [`examples/dotnet-oracle-to-ts-aws/rules/orders.yaml`](../examples/dotnet-oracle-to-ts-aws/rules/orders.yaml)
-   — a populated catalog with rules in every status state.
-4. [`examples/dotnet-oracle-to-ts-aws/.kiro/steering/legacy-plsql.md`](../examples/dotnet-oracle-to-ts-aws/.kiro/steering/legacy-plsql.md)
-   — the discipline around implicit context that distinguishes this
-   approach from a RAG.
+1. [`CONCEPTS.md`](../CONCEPTS.md) — the conceptual model: catalog, status
+   discipline, harness, and gates.
+2. [`docs/ai-modernization-workflow.md`](ai-modernization-workflow.md) — how
+   to use AI for .NET/Oracle to TypeScript/AWS modernization without letting AI
+   make cutover decisions.
+3. [`docs/rule-catalog.md`](rule-catalog.md) — the catalog format reference.
+4. [`examples/dotnet-oracle-to-ts-aws/rules/orders.yaml`](../examples/dotnet-oracle-to-ts-aws/rules/orders.yaml)
+   — a populated catalog with rules in multiple status states.
 5. [`examples/dotnet-oracle-to-ts-aws/shadow/masks/orders-quote.yaml`](../examples/dotnet-oracle-to-ts-aws/shadow/masks/orders-quote.yaml)
-   — what good masking looks like, including what's not masked.
-6. [`core/steering/cutover-checklist.md`](../core/steering/cutover-checklist.md)
-   — the gate sequence.
+   — what careful response masking looks like.
 
-Then decide whether to adopt.
+## Day-1 Loop
 
-## Once you're set up — the day-1 loop
+1. Pick a domain that is read-heavy, low-criticality, and well understood.
+2. Extract rules from one legacy file, stored procedure, job, or endpoint.
+3. Review the extracted YAML and promote good entries into `rules/<domain>.yaml`.
+4. Link each rule to modern TypeScript service-layer sources as they are built.
+5. Add example tests, property tests, and shadow evidence.
+6. Use `rules dashboard` daily to catch gaps, unmapped endpoints, missing tests,
+   and unverified implementations.
 
-1. **Pick a domain to start with.** Read-heavy, low-criticality, well-
-   understood. Don't start with payments or auth.
-
-2. **First extraction.** In an agent session, point at a legacy file and
-   ask: *"Extract business rules from `legacy/...`"*. The
-   `extract-business-rules` skill activates; output goes to
-   `rules-raw/legacy/<domain>/`.
-
-3. **Review.** Open the YAML, check confidence levels, fix anything the
-   agent got wrong. Promote good extractions to `rules/<domain>.yaml`.
-
-4. **Implement the modern side.** Write the code referencing rule IDs in
-   commits. The hooks will re-verify on save.
-
-5. **Add the endpoint to your shadow harness.** Generate a mask config
-   via the `propose-mask-rules` skill on a sample of diffs. Manually
-   review — never trust auto-generated masks blindly.
-
-6. **Wait for clean.** Cutover gates the rest.
-
-## When things go wrong
+## When Things Go Wrong
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| `rules lint` reports schema errors | Catalog drifted from schema | Check the schema in `core/schema/catalog.schema.json` |
-| Skill doesn't activate when expected | Description doesn't match the user's phrasing | Edit the SKILL.md frontmatter to add the missing phrase |
-| Lots of `confidence: low` extractions | Chunk size too large | Re-extract one symbol at a time |
-| Linker proposes obviously wrong matches | Default threshold too low | Pass `--threshold 0.95` to `rules link` |
-| Shadow harness too noisy | Mask config under-masking cosmetic diffs | Use `propose-mask-rules` on the noisy clusters |
-| Shadow harness suspiciously quiet | Mask config over-masking real diffs | Audit the mask file; ensure no money/auth/state fields are masked |
+| `rules lint` reports schema errors | Catalog drifted from schema | Check `core/schema/catalog.schema.json` |
+| Lots of `confidence: low` extractions | Source chunk is too broad | Re-extract one procedure or symbol at a time |
+| Linker proposes wrong matches | Similarity threshold is too low | Pass `--threshold 0.95` to `rules link` |
+| Shadow harness is too noisy | Cosmetic diffs are under-masked | Review diff clusters and add narrow masks |
+| Shadow harness is suspiciously quiet | Important fields are over-masked | Audit masks; never mask money, auth, state, or errors |

@@ -41,8 +41,8 @@ Lint checks:
 
 ### Add a new rule
 
-1. Either run `extract-business-rules` skill, or hand-write following
-   the example file.
+1. Either use `rules extract` after wiring your AI provider, or hand-write
+   following the example file.
 2. Set `status: extracted` (or `net_new` for modern-only behavior).
 3. Run `rules lint` — fix any failures.
 4. Open a PR. Reviewer assigns `reviewed_by` and `reviewed_at` on merge.
@@ -81,7 +81,7 @@ data.
 
 | Status                   | What it means                                   | Who sets it          |
 |--------------------------|--------------------------------------------------|----------------------|
-| `extracted`              | AI extraction, awaiting human review            | Extraction skill     |
+| `extracted`              | AI extraction, awaiting human review            | Extract workflow     |
 | `implemented_unverified` | Code exists, examples not yet passing OR not yet verified by shadow | Human reviewer at promotion |
 | `implemented_verified`   | Examples pass AND shadow has seen real traffic clean | `rules verify` or shadow harness |
 | `gap`                    | Legacy rule, no modern counterpart yet           | Linker or reviewer   |

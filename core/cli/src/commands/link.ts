@@ -3,7 +3,7 @@
 // rules-raw/_link-proposals.yaml.
 //
 // SCAFFOLD: like extract, the heavy lift is an AI call. The structure below
-// is the integration point. See .kiro/skills/link-rule-catalogs/SKILL.md.
+// is the integration point.
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -65,9 +65,7 @@ export async function runLink(options: LinkOptions): Promise<number> {
   //
   //   Pseudocode:
   //
-  //   const systemPrompt = await fs.readFile(
-  //     ".kiro/skills/link-rule-catalogs/SKILL.md", "utf8"
-  //   );
+  //   const systemPrompt = buildLinkingSystemPrompt({ threshold });
   //   const userPrompt = JSON.stringify({ legacy: legacyRules, modern: modernRules });
   //   const proposalsYaml = await callAnthropicAPI({ ... });
   //   const proposals = YAML.parse(proposalsYaml).proposals as LinkProposal[];
@@ -129,7 +127,7 @@ export async function runLink(options: LinkOptions): Promise<number> {
   console.log(`  ${kleur.blue("orphan")}       ${summary.orphan}`);
   console.log("");
   console.log(kleur.dim(`Written to ${outPath}`));
-  console.log(kleur.yellow("\n⚠ Stub linker — replace with AI-driven semantic linking per the skill."));
+  console.log(kleur.yellow("\n⚠ Stub linker — replace with AI-driven semantic linking."));
 
   return 0;
 }

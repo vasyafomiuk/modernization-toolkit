@@ -1,5 +1,5 @@
 # Example mask configuration for the differential shadow harness.
-# Generate via: propose-mask-rules skill, then refine manually.
+# Generate from sampled shadow diffs, then refine manually.
 # Lives at: shadow/masks/<endpoint>.yaml
 
 endpoint:

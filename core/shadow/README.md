@@ -107,7 +107,7 @@ mask config is too strict and is reporting cosmetic noise as behavioral.
 
 ## Adding a new endpoint to the harness
 
-1. Run `propose-mask-rules` skill on a sample of 20-50 diffs from the
+1. Use your diff-classification workflow on a sample of 20-50 diffs from the
    endpoint (you'll need at least one day of traffic capture).
 2. Review the generated mask file. Verify it does NOT mask money,
    auth, or state fields.

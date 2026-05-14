@@ -7,6 +7,7 @@ import fsSync from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import YAML from "yaml";
 import type Database from "better-sqlite3";
 import {
   addProject,
@@ -18,6 +19,15 @@ import {
   type Project,
 } from "./db.js";
 import { loadAllCatalogs } from "../catalog.js";
+import type {
+  Confidence,
+  Rule,
+  RuleCriticality,
+  RulePriority,
+  RuleStatus,
+  RuleType,
+  Source,
+} from "../schema.js";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -225,4 +235,217 @@ export async function apiWriteRuleFile(
   await fs.mkdir(path.dirname(abs), { recursive: true });
   await fs.writeFile(abs, body.content, "utf8");
   return { ok: true, path: relPath, bytes: body.content.length };
+}
+
+// --- Structured rule creation ---
+
+const RULE_TYPES: RuleType[] = [
+  "validation",
+  "calculation",
+  "authorization",
+  "state_transition",
+  "side_effect",
+];
+
+const RULE_STATUSES: RuleStatus[] = [
+  "extracted",
+  "implemented_unverified",
+  "implemented_verified",
+  "gap",
+  "drift",
+  "net_new",
+  "deprecated",
+];
+
+const CONFIDENCES: Confidence[] = ["high", "medium", "low"];
+const PRIORITIES: RulePriority[] = ["P0", "P1", "P2", "P3"];
+const CRITICALITIES: RuleCriticality[] = ["critical", "high", "medium", "low"];
+
+function asRecord(value: unknown, label: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new ApiError(400, `${label} must be an object`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function requiredString(value: unknown, field: string): string {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new ApiError(400, `Missing '${field}'`);
+  }
+  return value.trim();
+}
+
+function optionalString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function enumValue<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  field: string,
+): T {
+  if (typeof value !== "string" || !allowed.includes(value as T)) {
+    throw new ApiError(400, `'${field}' must be one of: ${allowed.join(", ")}`);
+  }
+  return value as T;
+}
+
+function optionalEnumValue<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  field: string,
+): T | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  return enumValue(value, allowed, field);
+}
+
+function stringArray(value: unknown, field: string): string[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value)) throw new ApiError(400, `'${field}' must be an array`);
+  const strings = value
+    .filter((x): x is string => typeof x === "string")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  return strings.length ? strings : undefined;
+}
+
+function sourceList(value: unknown, field: string): Source[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value)) throw new ApiError(400, `'${field}' must be an array`);
+  const sources: Source[] = [];
+  for (const raw of value) {
+    const src = asRecord(raw, field);
+    const srcPath = optionalString(src.path);
+    const symbol = optionalString(src.symbol);
+    if (!srcPath && !symbol) continue;
+    if (!srcPath || !symbol) {
+      throw new ApiError(400, `Each '${field}' source needs both path and symbol`);
+    }
+    const lines = src.lines;
+    if (
+      !Array.isArray(lines) ||
+      lines.length !== 2 ||
+      !lines.every((n) => Number.isInteger(n) && n > 0) ||
+      lines[1] < lines[0]
+    ) {
+      throw new ApiError(400, `Each '${field}' source needs ordered lines: [start, end]`);
+    }
+    sources.push({ path: srcPath, symbol, lines: [lines[0], lines[1]] });
+  }
+  return sources.length ? sources : undefined;
+}
+
+function normalizeRule(rawRule: unknown, domain: string): Rule {
+  const input = asRecord(rawRule, "rule");
+  const id = requiredString(input.id, "rule.id");
+  if (!/^[A-Z]{2,5}-[A-Z]{3,5}-[0-9]{3,4}$/.test(id)) {
+    throw new ApiError(400, "Rule id must match <DOMAIN>-<KIND>-<NUM>, e.g. ORD-CALC-007");
+  }
+
+  const examples = input.examples;
+  if (!Array.isArray(examples) || examples.length < 2) {
+    throw new ApiError(400, "Rule needs at least two examples");
+  }
+
+  const legacy = sourceList(input.legacy_sources, "legacy_sources");
+  const modern = sourceList(input.modern_sources, "modern_sources");
+  if (!legacy && !modern) {
+    throw new ApiError(400, "Rule needs at least one legacy or modern source");
+  }
+
+  const rule: Rule = {
+    id,
+    type: enumValue(input.type, RULE_TYPES, "rule.type"),
+    domain,
+    description: requiredString(input.description, "rule.description"),
+    logic: requiredString(input.logic, "rule.logic"),
+    sources: {
+      ...(legacy ? { legacy } : {}),
+      ...(modern ? { modern } : {}),
+    },
+    examples: examples as Rule["examples"],
+    status: enumValue(input.status, RULE_STATUSES, "rule.status"),
+    confidence: enumValue(input.confidence, CONFIDENCES, "rule.confidence"),
+  };
+
+  const simpleFields = [
+    "app",
+    "capability",
+    "endpoint",
+    "owner",
+    "target_release",
+    "jira_ticket",
+    "trigger",
+    "effect",
+    "notes",
+    "drift_reason",
+    "deprecated_reason",
+    "reviewed_by",
+    "reviewed_at",
+  ] as const;
+  for (const field of simpleFields) {
+    const value = optionalString(input[field]);
+    if (value) rule[field] = value;
+  }
+
+  rule.priority = optionalEnumValue(input.priority, PRIORITIES, "rule.priority");
+  rule.criticality = optionalEnumValue(input.criticality, CRITICALITIES, "rule.criticality");
+  rule.preconditions = stringArray(input.preconditions, "rule.preconditions");
+  rule.tags = stringArray(input.tags, "rule.tags");
+
+  if (rule.status === "drift" && !rule.drift_reason) {
+    throw new ApiError(400, "Drift rules need a drift_reason");
+  }
+  if (rule.status === "deprecated" && !rule.deprecated_reason) {
+    throw new ApiError(400, "Deprecated rules need a deprecated_reason");
+  }
+  if (rule.confidence === "low" && !rule.notes) {
+    throw new ApiError(400, "Low-confidence rules need notes");
+  }
+
+  return Object.fromEntries(
+    Object.entries(rule).filter(([, value]) => value !== undefined),
+  ) as Rule;
+}
+
+export async function apiAddRule(
+  db: Database.Database,
+  projectId: number,
+  body: { domain?: string; rule?: unknown } = {},
+) {
+  const project = requireProject(db, projectId);
+  const domain = requiredString(body.domain, "domain");
+  if (!/^[a-z][a-z0-9_-]*$/.test(domain)) {
+    throw new ApiError(400, "Domain must be lowercase, e.g. orders or policy_admin");
+  }
+
+  const rule = normalizeRule(body.rule, domain);
+  const rulesRoot = path.join(project.path, "rules");
+  await fs.mkdir(rulesRoot, { recursive: true });
+
+  const catalogs = fsSync.existsSync(rulesRoot) ? await loadAllCatalogs(rulesRoot) : [];
+  const duplicate = catalogs
+    .flatMap((c) => c.rules)
+    .find((existing) => existing.id === rule.id);
+  if (duplicate) throw new ApiError(409, `Rule id already exists: ${rule.id}`);
+
+  const fileName = `${domain}.yaml`;
+  const filePath = safeRulePath(project, fileName);
+  let existingRules: Rule[] = [];
+  if (fsSync.existsSync(filePath)) {
+    const parsed = YAML.parse(await fs.readFile(filePath, "utf8"));
+    if (!Array.isArray(parsed)) throw new ApiError(400, `${fileName} must contain a YAML array`);
+    existingRules = parsed as Rule[];
+  }
+
+  existingRules.push(rule);
+  const yaml = YAML.stringify(existingRules, {
+    lineWidth: 100,
+    minContentWidth: 20,
+  });
+  await fs.writeFile(filePath, yaml, "utf8");
+
+  return { ok: true, file: fileName, rule };
 }
